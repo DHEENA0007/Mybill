@@ -12,7 +12,13 @@ router.register(r'roles', RoleViewSet, basename='roles')
 router.register(r'permissions', PermissionViewSet, basename='permissions')
 router.register(r'audit-logs', AuditLogViewSet, basename='audit-logs')
 
+from django.http import JsonResponse
+
+def health_check(request):
+    return JsonResponse({'status': 'ok'})
+
 urlpatterns = [
+    path('health/', health_check, name='health-check'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('users.urls')),
     path('api/choices/', ChoicesView.as_view(), name='choices'),
