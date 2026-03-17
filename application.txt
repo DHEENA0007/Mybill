@@ -1,0 +1,526 @@
+Billing & Inventory Management Application
+System Draft (Django + React + Tailwind v4)
+1. Overview
+
+The Billing & Inventory Management Application is designed to help business owners manage their stock, purchases, sales, credits, returns, and financial tracking through a single platform. The system allows complete control over inventory operations while maintaining proper records of purchase payments, sales credits, and pending balances.
+
+Unlike traditional billing systems that rely on predefined roles such as manager, cashier, or accountant, this application introduces a dynamic role and permission management system. The owner of the business (Super Admin) can create roles dynamically and assign permissions according to the operational needs of their company.
+
+The application ensures transparency and traceability for all operations including stock movement, purchase transactions, sales billing, credit logs, and payment settlements.
+
+The system will be accessible across web, mobile browsers, and desktop environments through a responsive React frontend.
+
+2. Technology Stack
+Backend
+
+Framework: Python Django
+
+API Layer: Django REST Framework (DRF)
+
+Authentication: JWT / Token Authentication
+
+Database: SQL
+
+Background Tasks: Celery 
+
+Frontend
+
+Framework: React.js
+
+Styling: Tailwind CSS v4
+
+State Management: React Query / Redux Toolkit
+
+UI Components: Headless UI / ShadCN
+
+Charts: Chart.js / Recharts
+
+
+3. User Roles and Access Control
+3.1 Super Admin
+
+The Super Admin is the owner of the application. This is the only predefined role in the system.
+
+Responsibilities:
+
+Create and manage users
+
+Create custom roles
+
+Assign permissions
+
+View financial reports
+
+Configure application settings
+
+Monitor all transactions
+
+The Super Admin has complete system access.
+
+3.2 Dynamic Role System
+
+Instead of hardcoded roles, the system allows the owner to create roles dynamically.
+
+Example roles that owners may create:
+
+Cashier
+
+Accountant
+
+Store Manager
+
+Inventory Manager
+
+Sales Operator
+
+Each role can be configured with specific permissions.
+
+Example permission categories:
+
+Inventory
+
+Add Stock
+
+Edit Stock
+
+Delete Stock
+
+View Stock
+
+Purchases
+
+Create Purchase Entry
+
+Update Purchase
+
+Approve Purchase
+
+Record Payment
+
+Sales
+
+Create Sales Bill
+
+Edit Bill
+
+Cancel Bill
+
+View Sales
+
+Returns
+
+Process Sales Return
+
+Process Purchase Return
+
+Financial
+
+View Credit Logs
+
+Record Payment
+
+View Reports
+
+This permission system ensures fine-grained control over business operations.
+
+4. Core Modules
+
+The application consists of several core modules.
+
+5. Inventory Management Module
+
+This module tracks the complete stock flow of products.
+
+Features
+
+Product creation
+
+Category management
+
+Stock quantity tracking
+
+Stock adjustment
+
+Low stock alerts
+
+Barcode support
+
+Product Fields
+
+Product Name
+
+SKU Code
+
+Category
+
+Purchase Price
+
+Selling Price
+
+Current Stock
+
+Minimum Stock Level
+
+Stock Updates
+
+Stock automatically updates when:
+
+Purchase entry added
+
+Sales entry created
+
+Return processed
+
+6. Purchase Management
+
+This module manages supplier purchases and inventory inflow.
+
+Features
+
+Purchase entry creation
+
+Supplier management
+
+Payment tracking
+
+Pending purchase payment logs
+
+Purchase Flow
+
+Create supplier
+
+Create purchase entry
+
+Add purchased products
+
+Update stock automatically
+
+Record payment
+
+Purchase Status
+
+Paid
+
+Partial Payment
+
+Pending
+
+Purchase Data
+
+Supplier
+
+Purchase Date
+
+Products
+
+Quantity
+
+Purchase Amount
+
+Payment Paid
+
+Balance Due
+
+7. Sales Billing Module
+
+This module generates sales invoices for customers.
+
+Features
+
+Create invoice
+
+Add multiple products
+
+Automatic price calculation
+
+Tax support
+
+Print / Download bill
+
+Customer credit option
+
+Invoice Details
+
+Invoice Number
+
+Customer
+
+Product list
+
+Quantity
+
+Price
+
+Tax
+
+Total Amount
+
+8. Sales Credit Management
+
+Customers may purchase items on credit.
+
+The system maintains complete credit tracking.
+
+Credit Features
+
+Customer credit log
+
+Payment history
+
+Remaining balance tracking
+
+Credit reports
+
+Credit Fields
+
+Customer Name
+
+Invoice Number
+
+Credit Amount
+
+Paid Amount
+
+Remaining Balance
+
+9. Return Management
+
+Returns are an important part of inventory control.
+
+The system supports both return types.
+
+Sales Return
+
+Customer returns purchased items.
+
+System Actions
+
+Increase stock
+
+Adjust invoice
+
+Update credit balance
+
+Purchase Return
+
+Items returned to supplier.
+
+System Actions
+
+Reduce stock
+
+Adjust supplier balance
+
+10. Payment Tracking System
+
+The system tracks both incoming and outgoing payments.
+
+Incoming Payments
+
+Customer payments for credit bills.
+
+Outgoing Payments
+
+Payments to suppliers.
+
+Payment Logs
+
+Each payment entry includes:
+
+Payment ID
+
+Reference Invoice
+
+Amount Paid
+
+Payment Method
+
+Payment Date
+
+11. Reports and Analytics
+
+The system provides real-time business reports.
+
+Reports Available
+
+Sales Reports
+
+Daily sales
+
+Monthly sales
+
+Product sales report
+
+Inventory Reports
+
+Stock availability
+
+Low stock report
+
+Financial Reports
+
+Customer credit report
+
+Supplier pending payments
+
+Profit summary
+
+12. Database Architecture (Simplified)
+
+Important tables in the system.
+
+Users
+Roles
+Permissions
+RolePermissions
+UserRoles
+
+Products
+Categories
+StockTransactions
+
+Suppliers
+Purchases
+PurchaseItems
+
+Customers
+SalesInvoices
+InvoiceItems
+
+Returns
+
+Payments
+CreditLogs
+
+AuditLogs
+
+13. API Architecture (Django REST)
+
+Example APIs.
+
+Auth APIs
+
+POST /api/login
+POST /api/logout
+
+Product APIs
+
+GET /api/products
+POST /api/products
+PUT /api/products/{id}
+
+Purchase APIs
+
+POST /api/purchases
+GET /api/purchases
+
+Sales APIs
+
+POST /api/invoices
+GET /api/invoices
+
+Payment APIs
+
+POST /api/payments
+GET /api/payments
+
+Role Management
+
+POST /api/roles
+POST /api/roles/assign-permissions
+
+14. Frontend Application Structure (React)
+Pages
+
+Login
+Dashboard
+
+Products
+
+Product List
+
+Add Product
+
+Inventory
+
+Stock View
+
+Purchases
+
+Purchase Entry
+
+Purchase History
+
+Sales
+
+Billing Screen
+
+Invoice History
+
+Returns
+
+Sales Return
+
+Purchase Return
+
+Payments
+
+Supplier Payments
+
+Customer Payments
+
+Reports
+
+Sales Reports
+
+Inventory Reports
+
+Admin
+
+Role Management
+
+User Management
+
+15. Security Features
+
+The system ensures data security through:
+
+JWT authentication
+
+Permission based access control
+
+API authorization middleware
+
+Audit logging
+
+Secure password hashing
+
+16. Future Enhancements
+
+The system can be extended with advanced features such as:
+
+GST invoice generation
+
+Barcode scanning
+
+Mobile app version
+
+AI demand prediction
+
+Automated reorder suggestions
+
+WhatsApp invoice sharing
+
+Multi-branch inventory management
+
+17. Application Workflow
+
+Typical business workflow.
+
+Supplier → Purchase Entry → Stock Updated
+
+Customer → Sales Invoice → Stock Reduced
+
+Customer Credit → Payment → Balance Updated
+
+Return Entry → Stock Adjusted → Financial Update
