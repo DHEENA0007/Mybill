@@ -5,7 +5,7 @@
       "destination": "https://mybill-u3mf.onrender.com/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api).*)",
       "destination": "/index.html"
     }
   ]
