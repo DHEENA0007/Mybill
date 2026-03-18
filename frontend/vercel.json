@@ -5,6 +5,9 @@
       "dest": "https://mybill-u3mf.onrender.com/api/$1"
     },
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
