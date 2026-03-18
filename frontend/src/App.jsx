@@ -23,6 +23,7 @@ import CreditLog from './pages/Credits/CreditLog';
 import SalesReport from './pages/Reports/SalesReport';
 import InventoryReport from './pages/Reports/InventoryReport';
 import FinancialReport from './pages/Reports/FinancialReport';
+import CalendarReport from './pages/Reports/CalendarReport';
 import UserManagement from './pages/Admin/UserManagement';
 import RoleManagement from './pages/Admin/RoleManagement';
 import InvoiceTemplates from './pages/Admin/InvoiceTemplates';
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="reports/sales" element={<SalesReport />} />
             <Route path="reports/inventory" element={<InventoryReport />} />
             <Route path="reports/financial" element={<FinancialReport />} />
+            <Route path="reports/calendar" element={<CalendarReport />} />
             <Route path="admin/users" element={<UserManagement />} />
             <Route path="admin/roles" element={<RoleManagement />} />
             <Route path="admin/invoice-templates" element={<InvoiceTemplates />} />

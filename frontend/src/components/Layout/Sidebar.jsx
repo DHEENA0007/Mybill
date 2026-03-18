@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, FileText, RotateCcw,
   CreditCard, BarChart2, Shield, Users, ChevronLeft, ChevronRight,
-  Tag, Truck, LogOut, Boxes, Layout
+  Tag, Truck, LogOut, Boxes, Layout, CalendarDays
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import usePermission from '../../hooks/usePermission';
@@ -59,6 +59,7 @@ const navGroups = [
       { to: '/reports/sales', icon: BarChart2, label: 'Sales Reports', perm: ['reports.sales'] },
       { to: '/reports/inventory', icon: BarChart2, label: 'Inventory', perm: ['reports.inventory'] },
       { to: '/reports/financial', icon: BarChart2, label: 'Financial', perm: ['reports.financial'] },
+      { to: '/reports/calendar', icon: CalendarDays, label: 'Calendar', perm: ['reports.sales', 'reports.financial'] },
     ],
   },
   {
