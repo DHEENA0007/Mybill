@@ -43,6 +43,7 @@ class Permission(models.Model):
         ('financial', 'Financial'),
         ('users', 'Users'),
         ('reports', 'Reports'),
+        ('accounts', 'Accounts'),
     ]
     name = models.CharField(max_length=200)
     codename = models.CharField(max_length=100, unique=True)

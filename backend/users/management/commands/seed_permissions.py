@@ -44,6 +44,16 @@ PERMISSIONS = [
     ('users', 'View Users',                      'users.view'),
     ('users', 'Manage Users',                    'users.manage'),
     ('users', 'Manage Roles & Permissions',      'users.manage_roles'),
+
+    # Accounts
+    ('accounts', 'View Incomes',                 'accounts.view_incomes'),
+    ('accounts', 'Manage Incomes',               'accounts.manage_incomes'),
+    ('accounts', 'View Expenses',                'accounts.view_expenses'),
+    ('accounts', 'Manage Expenses',              'accounts.manage_expenses'),
+    ('accounts', 'Manage Income Types',          'accounts.manage_income_types'),
+    ('accounts', 'Manage Expense Categories',    'accounts.manage_categories'),
+    ('accounts', 'View Accounts Reports',        'accounts.view_reports'),
+    ('accounts', 'View Accounts Dashboard',      'accounts.view_dashboard'),
 ]
 
 
