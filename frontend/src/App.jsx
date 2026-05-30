@@ -35,6 +35,7 @@ import AccountsDashboard from './pages/Accounts/Dashboard';
 import Incomes from './pages/Accounts/Incomes';
 import Expenses from './pages/Accounts/Expenses';
 import AccountsSettings from './pages/Accounts/Settings';
+import AccountsReports from './pages/Accounts/Reports';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,7 @@ export default function App() {
             <Route index element={<AccountsDashboard />} />
             <Route path="incomes" element={<Incomes />} />
             <Route path="expenses" element={<Expenses />} />
+            <Route path="reports" element={<AccountsReports />} />
             <Route path="settings" element={<AccountsSettings />} />
           </Route>
         </Routes>
