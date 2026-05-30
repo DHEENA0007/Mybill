@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, FileText, RotateCcw,
   CreditCard, BarChart2, Shield, Users, ChevronLeft, ChevronRight,
-  Tag, Truck, LogOut, Boxes, Layout, CalendarDays
+  Tag, Truck, LogOut, Boxes, Layout, CalendarDays, ArrowLeftRight
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import usePermission from '../../hooks/usePermission';
@@ -153,6 +153,18 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Switch Portal Button */}
+      <div className="px-3 pb-3">
+        <button
+          onClick={() => navigate('/accounts')}
+          className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 ${collapsed ? 'justify-center' : ''}`}
+          title={collapsed ? 'Accounts Portal' : undefined}
+        >
+          <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
+          {!collapsed && <span>Accounts Portal</span>}
+        </button>
+      </div>
 
       {/* User */}
       <div className="border-t border-slate-800 p-3">

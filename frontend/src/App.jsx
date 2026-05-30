@@ -29,6 +29,13 @@ import RoleManagement from './pages/Admin/RoleManagement';
 import InvoiceTemplates from './pages/Admin/InvoiceTemplates';
 import InvoiceTemplateEditor from './pages/Admin/InvoiceTemplateEditor';
 
+// Accounts Portal
+import AccountsLayout from './components/AccountsLayout/AccountsLayout';
+import AccountsDashboard from './pages/Accounts/Dashboard';
+import Incomes from './pages/Accounts/Incomes';
+import Expenses from './pages/Accounts/Expenses';
+import AccountsSettings from './pages/Accounts/Settings';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { retry: 1, staleTime: 30000 },
@@ -86,6 +93,14 @@ export default function App() {
             <Route path="admin/invoice-templates/new" element={<InvoiceTemplateEditor />} />
             <Route path="admin/invoice-templates/:id/edit" element={<InvoiceTemplateEditor />} />
             <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+          
+          {/* Accounts Portal Routes */}
+          <Route path="/accounts" element={<ProtectedRoute><AccountsLayout /></ProtectedRoute>}>
+            <Route index element={<AccountsDashboard />} />
+            <Route path="incomes" element={<Incomes />} />
+            <Route path="expenses" element={<Expenses />} />
+            <Route path="settings" element={<AccountsSettings />} />
           </Route>
         </Routes>
       </BrowserRouter>
