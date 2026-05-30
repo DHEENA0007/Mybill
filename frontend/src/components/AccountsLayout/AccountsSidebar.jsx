@@ -20,7 +20,7 @@ const navGroups = [
   }
 ];
 
-export default function AccountsSidebar() {
+export default function AccountsSidebar({ onCloseMobile }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
@@ -74,6 +74,9 @@ export default function AccountsSidebar() {
                   <NavLink
                     to={to}
                     end={to === '/accounts'}
+                    onClick={() => {
+                      if (onCloseMobile) onCloseMobile();
+                    }}
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group ${
                         isActive

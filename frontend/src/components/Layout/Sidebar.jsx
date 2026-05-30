@@ -73,7 +73,7 @@ const navGroups = [
   },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ onCloseMobile }) {
   const [collapsed, setCollapsed] = useState(false);
   const { user, logout } = useAuthStore();
   const { can, isSuperAdmin } = usePermission();
@@ -134,6 +134,9 @@ export default function Sidebar() {
                     <NavLink
                       to={to}
                       end={to === '/'}
+                      onClick={() => {
+                        if (onCloseMobile) onCloseMobile();
+                      }}
                       className={({ isActive }) =>
                         `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors group ${
                           isActive

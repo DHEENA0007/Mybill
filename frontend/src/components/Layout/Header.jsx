@@ -1,4 +1,4 @@
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, Menu } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
@@ -22,18 +22,29 @@ const titles = {
   '/admin/roles': 'Role Management',
 };
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { pathname } = useLocation();
   const { user } = useAuthStore();
   const title = titles[pathname] || 'BillPro';
 
   return (
-    <header className="bg-white border-b border-gray-200 px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
-      <div>
-        <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
-        <p className="text-xs text-gray-400">
-          {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-        </p>
+    <header className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3.5 flex items-center justify-between sticky top-0 z-30">
+      <div className="flex items-center gap-3">
+        {onMenuClick && (
+          <button 
+            onClick={onMenuClick}
+            className="lg:hidden p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Open menu"
+          >
+            <Menu className="w-5.5 h-5.5" />
+          </button>
+        )}
+        <div>
+          <h1 className="text-base sm:text-lg font-semibold text-gray-900 leading-tight">{title}</h1>
+          <p className="text-[10px] sm:text-xs text-gray-400">
+            {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors relative">
