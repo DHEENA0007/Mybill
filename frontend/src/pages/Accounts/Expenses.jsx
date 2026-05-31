@@ -24,17 +24,25 @@ const groupByDate = (expenses) => {
 };
 
 const formatDate = (dateStr) => {
+  if (!dateStr) return '';
   const d = new Date(dateStr + 'T00:00:00');
   const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
   return d.toLocaleDateString('en-IN', options);
 };
 
-const emptyForm = { subcategory: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' };
+const getLocalDateString = (d = new Date()) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const emptyForm = { subcategory: '', amount: '', date: getLocalDateString(), remarks: '' };
 
 export default function Expenses() {
   const qc = useQueryClient();
   const [expandedDates, setExpandedDates] = useState({});
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(() => getLocalDateString());
   const [filters, setFilters] = useState({ category: '', subcategory: '', date_from: '', date_to: '', search: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -158,42 +166,35 @@ export default function Expenses() {
   const minDate = allDates.length > 0 ? allDates[allDates.length - 1] : null; // oldest
   const maxDate = allDates.length > 0 ? allDates[0] : null; // newest
 
-  // Set initial selected date if not set
-  if (allExpensesData && !selectedDate && maxDate) {
-    setSelectedDate(maxDate);
-  }
-
   const goToPreviousDay = () => {
-    const currentDate = new Date(selectedDate);
-    const previousDate = new Date(currentDate);
-    previousDate.setDate(previousDate.getDate() - 1);
-    const prevDateStr = previousDate.toISOString().split('T')[0];
-    
-    if (minDate && prevDateStr >= minDate) {
-      setSelectedDate(prevDateStr);
-    }
+    const parts = selectedDate.split('-');
+    const currentDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    currentDate.setDate(currentDate.getDate() - 1);
+    setSelectedDate(getLocalDateString(currentDate));
   };
 
   const goToNextDay = () => {
-    const currentDate = new Date(selectedDate);
-    const nextDate = new Date(currentDate);
-    nextDate.setDate(nextDate.getDate() + 1);
-    const nextDateStr = nextDate.toISOString().split('T')[0];
-    
-    if (maxDate && nextDateStr <= maxDate) {
+    const parts = selectedDate.split('-');
+    const currentDate = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    currentDate.setDate(currentDate.getDate() + 1);
+    const nextDateStr = getLocalDateString(currentDate);
+    const today = getLocalDateString();
+    if (nextDateStr <= today) {
       setSelectedDate(nextDateStr);
     }
   };
 
   const handleDateChange = (e) => {
     const newDate = e.target.value;
-    if (minDate && maxDate && newDate >= minDate && newDate <= maxDate) {
+    const today = getLocalDateString();
+    if (newDate <= today) {
       setSelectedDate(newDate);
     }
   };
 
-  const canGoPrevious = selectedDate && minDate && selectedDate > minDate;
-  const canGoNext = selectedDate && maxDate && selectedDate < maxDate;
+  const today = getLocalDateString();
+  const canGoPrevious = true; // can always go back
+  const canGoNext = selectedDate < today; // can go forward only if not at today
 
   return (
     <div className="space-y-5">
@@ -207,7 +208,7 @@ export default function Expenses() {
       </div>
 
       {/* Day Navigation */}
-      {allExpensesData && allExpensesData.length > 0 && (
+      {allExpensesData && (
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 shadow-sm p-4">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
@@ -229,13 +230,14 @@ export default function Expenses() {
                 type="date"
                 value={selectedDate}
                 onChange={handleDateChange}
-                min={minDate}
-                max={maxDate}
+                max={today}
                 className="mt-1 px-3 py-2 text-sm font-bold text-indigo-600 border border-indigo-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
-              <p className="text-xs text-gray-500 mt-2">
-                {allDates.length > 0 && `From ${formatDate(minDate)} to ${formatDate(maxDate)}`}
-              </p>
+              {allDates.length > 0 && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Recorded range: {formatDate(minDate)} to {formatDate(maxDate)}
+                </p>
+              )}
             </div>
 
             <button
@@ -301,7 +303,7 @@ export default function Expenses() {
           <div className="flex items-center justify-center py-16">
             <LoadingSpinner size="lg" />
           </div>
-        ) : !allExpensesData || allExpensesData.length === 0 ? (
+        ) : !allExpensesData ? (
           <div className="text-center py-16">
             <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No expenses found</p>
