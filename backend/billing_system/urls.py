@@ -3,7 +3,10 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from rest_framework.routers import DefaultRouter
-from users.views import UserViewSet, RoleViewSet, PermissionViewSet, AuditLogViewSet
+from users.views import (
+    UserViewSet, RoleViewSet, PermissionViewSet, AuditLogViewSet,
+    CompanyViewSet, CompanyAdminViewSet, CompanySetupViewSet,
+)
 from billing_system.choices_view import ChoicesView
 
 router = DefaultRouter()
@@ -11,6 +14,13 @@ router.register(r'users', UserViewSet, basename='users')
 router.register(r'roles', RoleViewSet, basename='roles')
 router.register(r'permissions', PermissionViewSet, basename='permissions')
 router.register(r'audit-logs', AuditLogViewSet, basename='audit-logs')
+
+# SuperAdmin routes
+router.register(r'superadmin/companies', CompanyViewSet, basename='superadmin-companies')
+router.register(r'superadmin/admins', CompanyAdminViewSet, basename='superadmin-admins')
+
+# Company Setup (for company admins)
+router.register(r'company-setup', CompanySetupViewSet, basename='company-setup')
 
 from django.http import JsonResponse
 

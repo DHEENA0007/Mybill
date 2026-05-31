@@ -28,6 +28,7 @@ import UserManagement from './pages/Admin/UserManagement';
 import RoleManagement from './pages/Admin/RoleManagement';
 import InvoiceTemplates from './pages/Admin/InvoiceTemplates';
 import InvoiceTemplateEditor from './pages/Admin/InvoiceTemplateEditor';
+import CompanySetup from './pages/Admin/CompanySetup';
 
 // Accounts Portal
 import AccountsLayout from './components/AccountsLayout/AccountsLayout';
@@ -36,6 +37,12 @@ import Incomes from './pages/Accounts/Incomes';
 import Expenses from './pages/Accounts/Expenses';
 import AccountsSettings from './pages/Accounts/Settings';
 import AccountsReports from './pages/Accounts/Reports';
+
+// SuperAdmin Portal
+import SuperAdminLayout from './components/SuperAdminLayout/SuperAdminLayout';
+import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
+import Companies from './pages/SuperAdmin/Companies';
+import Admins from './pages/SuperAdmin/Admins';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +60,13 @@ function PublicRoute({ children }) {
   return isAuthenticated ? <Navigate to="/" replace /> : children;
 }
 
+function SuperAdminRoute({ children }) {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!user?.is_superuser) return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -68,6 +82,8 @@ export default function App() {
         />
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+
+          {/* Main App Routes */}
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="products" element={<ProductList />} />
@@ -90,6 +106,7 @@ export default function App() {
             <Route path="reports/calendar" element={<CalendarReport />} />
             <Route path="admin/users" element={<UserManagement />} />
             <Route path="admin/roles" element={<RoleManagement />} />
+            <Route path="admin/company-setup" element={<CompanySetup />} />
             <Route path="admin/invoice-templates" element={<InvoiceTemplates />} />
             <Route path="admin/invoice-templates/new" element={<InvoiceTemplateEditor />} />
             <Route path="admin/invoice-templates/:id/edit" element={<InvoiceTemplateEditor />} />
@@ -103,6 +120,13 @@ export default function App() {
             <Route path="expenses" element={<Expenses />} />
             <Route path="reports" element={<AccountsReports />} />
             <Route path="settings" element={<AccountsSettings />} />
+          </Route>
+
+          {/* SuperAdmin Portal Routes */}
+          <Route path="/superadmin" element={<SuperAdminRoute><SuperAdminLayout /></SuperAdminRoute>}>
+            <Route index element={<SuperAdminDashboard />} />
+            <Route path="companies" element={<Companies />} />
+            <Route path="admins" element={<Admins />} />
           </Route>
         </Routes>
       </BrowserRouter>

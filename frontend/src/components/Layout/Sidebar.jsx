@@ -3,7 +3,8 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Package, ShoppingCart, FileText, RotateCcw,
   CreditCard, BarChart2, Shield, Users, ChevronLeft, ChevronRight,
-  Tag, Truck, LogOut, Boxes, Layout, CalendarDays, ArrowLeftRight
+  Tag, Truck, LogOut, Boxes, Layout, CalendarDays, ArrowLeftRight,
+  Building2
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import usePermission from '../../hooks/usePermission';
@@ -66,6 +67,7 @@ const navGroups = [
     label: 'Admin',
     perm: ['users.view', 'users.manage', 'users.manage_roles'],
     items: [
+      { to: '/admin/company-setup', icon: Building2, label: 'Company Setup', perm: ['users.manage', 'users.manage_roles'], staffOnly: true },
       { to: '/admin/users', icon: Users, label: 'Users', perm: ['users.view', 'users.manage'] },
       { to: '/admin/roles', icon: Shield, label: 'Roles', perm: ['users.manage_roles'] },
       { to: '/admin/invoice-templates', icon: Layout, label: 'Invoice Templates', perm: ['users.manage', 'users.manage_roles'] },
@@ -84,9 +86,11 @@ export default function Sidebar({ onCloseMobile }) {
     navigate('/login');
   };
 
-  const isVisible = (perms) => {
+  const isVisible = (perms, item) => {
     if (!perms) return true;
     if (isSuperAdmin) return true;
+    // staffOnly items require is_staff flag
+    if (item?.staffOnly && !user?.is_staff) return false;
     return perms.some(p => can(p));
   };
 
@@ -99,7 +103,12 @@ export default function Sidebar({ onCloseMobile }) {
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
               <FileText className="w-4 h-4 text-white" />
             </div>
-            <span className="text-white font-bold text-lg tracking-tight">BillPro</span>
+            <div>
+              <span className="text-white font-bold text-lg tracking-tight">BillPro</span>
+              {user?.company?.name && (
+                <p className="text-[10px] text-slate-400 -mt-0.5 truncate max-w-[140px]">{user.company.name}</p>
+              )}
+            </div>
           </div>
         )}
         {collapsed && (
@@ -118,7 +127,7 @@ export default function Sidebar({ onCloseMobile }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-6">
         {navGroups.map((group) => {
-          const visibleItems = group.items.filter(item => isVisible(item.perm));
+          const visibleItems = group.items.filter(item => isVisible(item.perm, item));
           if (!visibleItems.length) return null;
 
           return (
@@ -157,8 +166,19 @@ export default function Sidebar({ onCloseMobile }) {
         })}
       </nav>
 
-      {/* Switch Portal Button */}
-      <div className="px-3 pb-3">
+      {/* Portal Switch Buttons */}
+      <div className="px-3 pb-2 space-y-2">
+        {/* SuperAdmin Portal - only for superadmins */}
+        {isSuperAdmin && (
+          <button
+            onClick={() => navigate('/superadmin')}
+            className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-gradient-to-r from-violet-600/20 to-fuchsia-600/20 text-violet-300 hover:text-white hover:from-violet-600/40 hover:to-fuchsia-600/40 border border-violet-500/30 ${collapsed ? 'justify-center' : ''}`}
+            title={collapsed ? 'Super Admin' : undefined}
+          >
+            <Shield className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Super Admin</span>}
+          </button>
+        )}
         <button
           onClick={() => navigate('/accounts')}
           className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 ${collapsed ? 'justify-center' : ''}`}

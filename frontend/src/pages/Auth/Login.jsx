@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Eye, EyeOff } from 'lucide-react';
+import { FileText, Eye, EyeOff, Shield } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
@@ -15,9 +15,15 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(form);
+      const data = await login(form);
       toast.success('Welcome back!');
-      navigate('/');
+      // Redirect superadmins to superadmin portal
+      const userData = data?.user || useAuthStore.getState().user;
+      if (userData?.is_superuser) {
+        navigate('/superadmin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Invalid credentials');
     } finally {

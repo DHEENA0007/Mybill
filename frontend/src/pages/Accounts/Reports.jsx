@@ -6,6 +6,7 @@ import Button from '../../components/UI/Button';
 import Select from '../../components/UI/Select';
 import Input from '../../components/UI/Input';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
+import html2pdf from 'html2pdf.js';
 
 const fmt = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
@@ -84,7 +85,7 @@ export default function Reports() {
     ...expenses.map(e => ({ ...e, type: 'expense', label: `${e.category_name} / ${e.subcategory_name}`, amt: parseFloat(e.amount) })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
-  const handlePrintReport = () => {
+  const generateReportHTML = () => {
     // Group Incomes by Type
     const incGroups = {};
     incomes.forEach(i => {
@@ -103,177 +104,30 @@ export default function Reports() {
       expGroups[catName][subName].push(e);
     });
 
-    const printWindow = window.open('', '_blank');
-    
     let html = `
-      <html>
-        <head>
-          <title>Accounts Statement of Accounts</title>
-          <style>
-            @page {
-              size: auto;
-              margin: 0;
-            }
-            body {
-              font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-              color: #1f2937;
-              padding: 20mm 15mm;
-              line-height: 1.5;
-              background-color: #ffffff;
-            }
-            .header {
-              text-align: center;
-              border-bottom: 2px solid #3b82f6;
-              padding-bottom: 16px;
-              margin-bottom: 24px;
-            }
-            .header h1 {
-              margin: 0;
-              font-size: 26px;
-              color: #1e3a8a;
-              font-weight: 800;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .header p {
-              margin: 4px 0 0 0;
-              color: #4b5563;
-              font-size: 13px;
-            }
-            .period {
-              font-weight: 600;
-              color: #2563eb;
-              margin-top: 6px;
-            }
-            .summary-grid {
-              display: grid;
-              grid-template-columns: repeat(3, 1fr);
-              gap: 16px;
-              margin-bottom: 30px;
-            }
-            .summary-card {
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 12px;
-              background-color: #f9fafb;
-              text-align: center;
-            }
-            .summary-card h3 {
-              margin: 0;
-              font-size: 11px;
-              color: #6b7280;
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-            }
-            .summary-card p {
-              margin: 4px 0 0 0;
-              font-size: 18px;
-              font-weight: 700;
-            }
-            .summary-card.income { border-top: 4px solid #10b981; }
-            .summary-card.expense { border-top: 4px solid #ef4444; }
-            .summary-card.net { border-top: 4px solid #3b82f6; }
-            
-            .section-title {
-              font-size: 18px;
-              color: #1e3a8a;
-              border-bottom: 2px solid #e5e7eb;
-              padding-bottom: 6px;
-              margin-top: 32px;
-              margin-bottom: 16px;
-              text-transform: uppercase;
-              font-weight: 700;
-            }
-            
-            .group-title {
-              font-size: 13px;
-              font-weight: 700;
-              color: #1e40af;
-              background: #eff6ff;
-              padding: 6px 12px;
-              margin-top: 18px;
-              margin-bottom: 8px;
-              border-radius: 4px;
-              display: flex;
-              justify-content: space-between;
-            }
-            .subgroup-title {
-              font-size: 12px;
-              font-weight: 700;
-              color: #b45309;
-              background: #fffbeb;
-              padding: 4px 10px;
-              margin-top: 10px;
-              margin-bottom: 6px;
-              border-radius: 4px;
-              display: flex;
-              justify-content: space-between;
-            }
-            
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 12px;
-              font-size: 12px;
-            }
-            th, td {
-              border: 1px solid #e5e7eb;
-              padding: 8px 10px;
-              text-align: left;
-            }
-            th {
-              background-color: #f9fafb;
-              font-weight: 600;
-              color: #374151;
-            }
-            .text-right { text-align: right; }
-            .signature-container {
-              margin-top: 60px;
-              display: flex;
-              justify-content: flex-end;
-              page-break-inside: avoid;
-            }
-            .signature-box {
-              width: 240px;
-              text-align: center;
-              border-top: 1px solid #9ca3af;
-              padding-top: 8px;
-              color: #374151;
-              font-size: 12px;
-              font-weight: 600;
-            }
-            .sig-line {
-              height: 50px;
-            }
-            @media print {
-              body { padding: 0; }
-              .no-print { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Statement of Accounts</h1>
-            <p>DHEENA0007 / Mybill - Financial Portal</p>
-            <div class="period">Period: ${dateFrom} to ${dateTo}</div>
+      <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1f2937; padding: 20mm 15mm; line-height: 1.5; background-color: #ffffff;">
+        <div style="text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 24px;">
+          <h1 style="margin: 0; font-size: 26px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Statement of Accounts</h1>
+          <p style="margin: 4px 0 0 0; color: #4b5563; font-size: 13px;">DHEENA0007 / Mybill - Financial Portal</p>
+          <div style="font-weight: 600; color: #2563eb; margin-top: 6px;">Period: ${dateFrom} to ${dateTo}</div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px;">
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #10b981;">
+            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Total Income</h3>
+            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #10b981;">${fmt(totalIncome)}</p>
           </div>
-          
-          <div class="summary-grid">
-            <div class="summary-card income">
-              <h3>Total Income</h3>
-              <p style="color: #10b981;">${fmt(totalIncome)}</p>
-            </div>
-            <div class="summary-card expense">
-              <h3>Total Expenses</h3>
-              <p style="color: #ef4444;">${fmt(totalExpense)}</p>
-            </div>
-            <div class="summary-card net">
-              <h3>Net Balance</h3>
-              <p style="color: #3b82f6;">${fmt(netBalance)}</p>
-            </div>
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #ef4444;">
+            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Total Expenses</h3>
+            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #ef4444;">${fmt(totalExpense)}</p>
           </div>
-          
-          <div class="section-title">Incomes Breakdown (Type by Type)</div>
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #3b82f6;">
+            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Net Balance</h3>
+            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #3b82f6;">${fmt(netBalance)}</p>
+          </div>
+        </div>
+        
+        <div style="font-size: 18px; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700;">Incomes Breakdown (Type by Type)</div>
     `;
 
     if (Object.keys(incGroups).length === 0) {
@@ -282,16 +136,16 @@ export default function Reports() {
       Object.entries(incGroups).forEach(([type, items]) => {
         const subTotal = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
         html += `
-          <div class="group-title">
+          <div style="font-size: 13px; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 6px 12px; margin-top: 18px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between;">
             <span>Income Type: ${type}</span>
             <span>Total: ${fmt(subTotal)}</span>
           </div>
-          <table>
+          <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px;">
             <thead>
               <tr>
-                <th style="width: 15%;">Date</th>
-                <th style="width: 60%;">Remarks</th>
-                <th style="width: 25%; text-align: right;">Amount</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 15%;">Date</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 60%;">Remarks</th>
+                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; background-color: #f9fafb; font-weight: 600; color: #374151; width: 25%;">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -299,9 +153,9 @@ export default function Reports() {
         items.forEach(item => {
           html += `
             <tr>
-              <td>${item.date}</td>
-              <td>${item.remarks || '-'}</td>
-              <td class="text-right" style="font-weight: 600; color: #10b981;">${fmt(item.amount)}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.date}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.remarks || '-'}</td>
+              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; font-weight: 600; color: #10b981;">${fmt(item.amount)}</td>
             </tr>
           `;
         });
@@ -312,7 +166,7 @@ export default function Reports() {
       });
     }
 
-    html += `<div class="section-title" style="margin-top: 40px;">Expenses Breakdown (Category & Subcategory)</div>`;
+    html += `<div style="font-size: 18px; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 40px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700;">Expenses Breakdown (Category & Subcategory)</div>`;
 
     if (Object.keys(expGroups).length === 0) {
       html += `<p style="font-size: 13px; color: #6b7280;">No expense records found for this period.</p>`;
@@ -320,7 +174,7 @@ export default function Reports() {
       Object.entries(expGroups).forEach(([category, subs]) => {
         const catTotal = Object.values(subs).flat().reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
         html += `
-          <div class="group-title" style="background: #f8fafc; color: #334155; border-left: 4px solid #64748b;">
+          <div style="font-size: 13px; font-weight: 700; background: #f8fafc; color: #334155; border-left: 4px solid #64748b; padding: 6px 12px; margin-top: 18px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between;">
             <span>Category: ${category}</span>
             <span>Total: ${fmt(catTotal)}</span>
           </div>
@@ -329,16 +183,16 @@ export default function Reports() {
         Object.entries(subs).forEach(([sub, items]) => {
           const subTotal = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
           html += `
-            <div class="subgroup-title">
+            <div style="font-size: 12px; font-weight: 700; color: #b45309; background: #fffbeb; padding: 4px 10px; margin-top: 10px; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between;">
               <span>Subcategory: ${sub}</span>
               <span>Total: ${fmt(subTotal)}</span>
             </div>
-            <table>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px;">
               <thead>
                 <tr>
-                  <th style="width: 15%;">Date</th>
-                  <th style="width: 60%;">Remarks</th>
-                  <th style="width: 25%; text-align: right;">Amount</th>
+                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 15%;">Date</th>
+                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 60%;">Remarks</th>
+                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; background-color: #f9fafb; font-weight: 600; color: #374151; width: 25%;">Amount</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,9 +200,9 @@ export default function Reports() {
           items.forEach(item => {
             html += `
               <tr>
-                <td>${item.date}</td>
-                <td>${item.remarks || '-'}</td>
-                <td class="text-right" style="font-weight: 600; color: #ef4444;">${fmt(item.amount)}</td>
+                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.date}</td>
+                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.remarks || '-'}</td>
+                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; font-weight: 600; color: #ef4444;">${fmt(item.amount)}</td>
               </tr>
             `;
           });
@@ -361,14 +215,36 @@ export default function Reports() {
     }
 
     html += `
-          <div class="signature-container">
-            <div class="signature-box">
-              <div class="sig-line"></div>
-              Authorised Signatory
-              <div style="font-size: 10px; color: #6b7280; font-weight: normal; margin-top: 4px;">Generated on: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-            </div>
+        <div style="margin-top: 60px; display: flex; justify-content: flex-end; page-break-inside: avoid;">
+          <div style="width: 240px; text-align: center; border-top: 1px solid #9ca3af; padding-top: 8px; color: #374151; font-size: 12px; font-weight: 600;">
+            <div style="height: 50px;"></div>
+            Authorised Signatory
+            <div style="font-size: 10px; color: #6b7280; font-weight: normal; margin-top: 4px;">Generated on: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
-          
+        </div>
+      </div>
+    `;
+    
+    return html;
+  };
+
+  const handlePrintReport = () => {
+    const html = generateReportHTML();
+    const printWindow = window.open('', '_blank');
+    const fullHtml = `
+      <html>
+        <head>
+          <title>Accounts Statement of Accounts</title>
+          <style>
+            @page { size: auto; margin: 0; }
+            body { margin: 0; }
+            @media print {
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          ${html}
           <script>
             window.onload = function() {
               window.print();
@@ -378,10 +254,25 @@ export default function Reports() {
         </body>
       </html>
     `;
-    
     printWindow.document.open();
-    printWindow.document.write(html);
+    printWindow.document.write(fullHtml);
     printWindow.document.close();
+  };
+
+  const handleDownloadPDF = () => {
+    const html = generateReportHTML();
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    
+    const opt = {
+      margin:       10,
+      filename:     `accounts-report-${dateFrom}-to-${dateTo}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(element).save();
   };
 
   const handleExportCSV = () => {
@@ -416,8 +307,11 @@ export default function Reports() {
           <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={handleExportCSV} disabled={loading}>
             Export CSV
           </Button>
+          <Button variant="secondary" icon={<Download className="w-4 h-4" />} onClick={handleDownloadPDF} disabled={loading}>
+            Download PDF
+          </Button>
           <Button variant="primary" icon={<Printer className="w-4 h-4" />} onClick={handlePrintReport} disabled={loading}>
-            Print / PDF Report
+            Print Report
           </Button>
         </div>
       </div>

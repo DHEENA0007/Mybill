@@ -1,4 +1,4 @@
-import { Bell, Search, Menu } from 'lucide-react';
+import { Bell, Search, Menu, Building2 } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 
@@ -20,6 +20,8 @@ const titles = {
   '/reports/financial': 'Financial Reports',
   '/admin/users': 'User Management',
   '/admin/roles': 'Role Management',
+  '/admin/company-setup': 'Company Setup',
+  '/admin/invoice-templates': 'Invoice Templates',
 };
 
 export default function Header({ onMenuClick }) {
@@ -47,6 +49,12 @@ export default function Header({ onMenuClick }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        {/* Company Badge */}
+        {user?.company?.name && (
+          <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100">
+            <Building2 className="w-3 h-3" /> {user.company.name}
+          </span>
+        )}
         <button className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors relative">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />

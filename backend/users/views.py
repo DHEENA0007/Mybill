@@ -1,17 +1,39 @@
 from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser
+from rest_framework.permissions import IsAuthenticated, AllowAny, IsAdminUser, BasePermission
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
+from django.utils.text import slugify
 
-from .models import User, Role, Permission, RolePermission, UserRole, AuditLog
+from .models import User, Role, Permission, RolePermission, UserRole, AuditLog, Company
 from .serializers import (
     CustomTokenObtainPairSerializer, UserSerializer, RoleSerializer,
-    PermissionSerializer, RolePermissionSerializer, UserRoleSerializer, AuditLogSerializer
+    PermissionSerializer, RolePermissionSerializer, UserRoleSerializer,
+    AuditLogSerializer, CompanySerializer, CompanySetupSerializer,
+    CompanyAdminSerializer, get_user_permissions,
 )
 
+
+# ── Custom Permissions ───────────────────────────────────────────────────
+
+class IsSuperAdmin(BasePermission):
+    """Only allow Django superusers."""
+    def has_permission(self, request, view):
+        return request.user and request.user.is_authenticated and request.user.is_superuser
+
+
+class IsCompanyAdmin(BasePermission):
+    """Allow company admins (is_staff=True with a company)."""
+    def has_permission(self, request, view):
+        return (
+            request.user and request.user.is_authenticated
+            and (request.user.is_superuser or (request.user.is_staff and request.user.company_id))
+        )
+
+
+# ── Auth Views ───────────────────────────────────────────────────────────
 
 class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
@@ -33,6 +55,104 @@ class LogoutView(viewsets.ViewSet):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# ── SuperAdmin: Company Management ───────────────────────────────────────
+
+class CompanyViewSet(viewsets.ModelViewSet):
+    """
+    Superadmin-only CRUD for companies.
+    """
+    queryset = Company.objects.all().order_by('-created_at')
+    serializer_class = CompanySerializer
+    permission_classes = [IsSuperAdmin]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'email', 'city', 'gstin']
+    ordering_fields = ['name', 'created_at']
+
+    def perform_create(self, serializer):
+        # Auto-generate slug if not provided
+        name = serializer.validated_data.get('name', '')
+        slug = serializer.validated_data.get('slug', '') or slugify(name)
+        # Ensure uniqueness
+        base_slug = slug
+        counter = 1
+        while Company.objects.filter(slug=slug).exists():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        serializer.save(slug=slug)
+
+    @action(detail=True, methods=['post'])
+    def toggle_active(self, request, pk=None):
+        company = self.get_object()
+        company.is_active = not company.is_active
+        company.save()
+        return Response({'is_active': company.is_active})
+
+    @action(detail=False, methods=['get'])
+    def stats(self, request):
+        """Dashboard stats for superadmin."""
+        total = Company.objects.count()
+        active = Company.objects.filter(is_active=True).count()
+        total_admins = User.objects.filter(is_staff=True, is_superuser=False).count()
+        total_users = User.objects.filter(is_superuser=False).count()
+        companies = Company.objects.filter(is_active=True).order_by('-created_at')[:5]
+        recent = CompanySerializer(companies, many=True).data
+        return Response({
+            'total_companies': total,
+            'active_companies': active,
+            'total_admins': total_admins,
+            'total_users': total_users,
+            'recent_companies': recent,
+        })
+
+
+# ── SuperAdmin: Company Admin Management ─────────────────────────────────
+
+class CompanyAdminViewSet(viewsets.ModelViewSet):
+    """
+    Superadmin-only CRUD for company admins.
+    """
+    serializer_class = CompanyAdminSerializer
+    permission_classes = [IsSuperAdmin]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name', 'company__name']
+    ordering_fields = ['username', 'created_at']
+
+    def get_queryset(self):
+        qs = User.objects.filter(is_staff=True, is_superuser=False).select_related('company').order_by('-created_at')
+        company_id = self.request.query_params.get('company')
+        if company_id:
+            qs = qs.filter(company_id=company_id)
+        return qs
+
+
+# ── Company Setup (for company admins) ───────────────────────────────────
+
+class CompanySetupViewSet(viewsets.ViewSet):
+    """
+    Allows a company admin to view and update their own company details.
+    """
+    permission_classes = [IsCompanyAdmin]
+
+    def list(self, request):
+        company = request.user.company
+        if not company:
+            return Response({'detail': 'No company assigned.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanySetupSerializer(company)
+        return Response(serializer.data)
+
+    def create(self, request):
+        """Update company setup (uses POST for simplicity)."""
+        company = request.user.company
+        if not company:
+            return Response({'detail': 'No company assigned.'}, status=status.HTTP_404_NOT_FOUND)
+        serializer = CompanySetupSerializer(company, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+# ── User Management (company-scoped) ─────────────────────────────────────
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all().order_by('-created_at')
     serializer_class = UserSerializer
@@ -43,10 +163,21 @@ class UserViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = self.request.user
+        # Superadmins see all users
+        if not user.is_superuser and user.company_id:
+            queryset = queryset.filter(company=user.company)
         is_active = self.request.query_params.get('is_active')
         if is_active is not None:
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
         return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user.is_superuser and user.company_id:
+            serializer.save(company=user.company)
+        else:
+            serializer.save()
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
@@ -54,6 +185,14 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(request.user)
         data = serializer.data
         data['permissions'] = get_user_permissions(request.user)
+        # Include company details
+        if request.user.company:
+            data['company'] = {
+                'id': request.user.company.id,
+                'name': request.user.company.name,
+                'slug': request.user.company.slug,
+                'currency_symbol': request.user.company.currency_symbol,
+            }
         return Response(data)
 
     @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
@@ -81,12 +220,28 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Role not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# ── Role Management (company-scoped) ─────────────────────────────────────
+
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all().order_by('name')
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser and user.company_id:
+            queryset = queryset.filter(company=user.company)
+        return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if not user.is_superuser and user.company_id:
+            serializer.save(company=user.company)
+        else:
+            serializer.save()
 
     @action(detail=True, methods=['post'])
     def assign_permissions(self, request, pk=None):
@@ -126,6 +281,8 @@ class RoleViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Permission not found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# ── Permission & AuditLog ────────────────────────────────────────────────
+
 class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all().order_by('category', 'name')
     serializer_class = PermissionSerializer
@@ -150,6 +307,9 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = self.request.user
+        if not user.is_superuser and user.company_id:
+            queryset = queryset.filter(company=user.company)
         model_name = self.request.query_params.get('model_name')
         action_param = self.request.query_params.get('action')
         if model_name:

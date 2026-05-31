@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Role, Permission, RolePermission, UserRole, AuditLog
+from .models import User, Role, Permission, RolePermission, UserRole, AuditLog, Company
 
 
 def get_user_permissions(user):
@@ -14,6 +14,46 @@ def get_user_permissions(user):
     )
 
 
+# ── Company Serializers ──────────────────────────────────────────────────
+
+class CompanySerializer(serializers.ModelSerializer):
+    admin_count = serializers.SerializerMethodField()
+    user_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'name', 'slug', 'email', 'phone',
+            'address', 'city', 'state', 'country', 'pincode',
+            'gstin', 'pan', 'logo', 'currency', 'currency_symbol',
+            'financial_year_start', 'is_active',
+            'admin_count', 'user_count',
+            'created_at', 'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_admin_count(self, obj):
+        return obj.users.filter(is_staff=True).count()
+
+    def get_user_count(self, obj):
+        return obj.users.count()
+
+
+class CompanySetupSerializer(serializers.ModelSerializer):
+    """Serializer for company admins to update their own company profile."""
+    class Meta:
+        model = Company
+        fields = [
+            'id', 'name', 'email', 'phone',
+            'address', 'city', 'state', 'country', 'pincode',
+            'gstin', 'pan', 'logo', 'currency', 'currency_symbol',
+            'financial_year_start',
+        ]
+        read_only_fields = ['id']
+
+
+# ── Auth Serializers ─────────────────────────────────────────────────────
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     @classmethod
     def get_token(cls, user):
@@ -24,12 +64,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['is_superuser'] = user.is_superuser
         token['roles'] = list(user.user_roles.values_list('role__name', flat=True))
         token['permissions'] = get_user_permissions(user)
+        if user.company_id:
+            token['company_id'] = user.company_id
         return token
 
     def validate(self, attrs):
         data = super().validate(attrs)
         user = self.user
         perms = get_user_permissions(user)
+        company_data = None
+        if user.company:
+            company_data = {
+                'id': user.company.id,
+                'name': user.company.name,
+                'slug': user.company.slug,
+                'currency_symbol': user.company.currency_symbol,
+            }
         data['user'] = {
             'id': user.id,
             'username': user.username,
@@ -41,9 +91,12 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_superuser': user.is_superuser,
             'roles': list(user.user_roles.values_list('role__name', flat=True)),
             'permissions': perms,
+            'company': company_data,
         }
         return data
 
+
+# ── Core Serializers ─────────────────────────────────────────────────────
 
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -90,12 +143,14 @@ class UserRoleSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False)
+    company_name = serializers.CharField(source='company.name', read_only=True, default=None)
 
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'is_active', 'is_staff', 'is_superuser',
+            'company', 'company_name',
             'roles', 'password', 'created_at', 'updated_at', 'last_login'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login']
@@ -110,6 +165,40 @@ class UserSerializer(serializers.ModelSerializer):
             user.set_password(password)
         else:
             user.set_unusable_password()
+        user.save()
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
+
+
+class CompanyAdminSerializer(serializers.ModelSerializer):
+    """Serializer for creating company admins from superadmin portal."""
+    password = serializers.CharField(write_only=True, required=True)
+    company_name = serializers.CharField(source='company.name', read_only=True, default=None)
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email', 'first_name', 'last_name',
+            'phone', 'is_active', 'is_staff', 'is_superuser',
+            'company', 'company_name', 'password',
+            'created_at', 'updated_at', 'last_login'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_login', 'is_superuser']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        validated_data['is_staff'] = True
+        validated_data['is_superuser'] = False
+        user = User(**validated_data)
+        user.set_password(password)
         user.save()
         return user
 

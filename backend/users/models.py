@@ -2,9 +2,44 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 
+class Company(models.Model):
+    """Tenant company — each admin manages one company."""
+    name = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=100, unique=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    city = models.CharField(max_length=100, blank=True, null=True)
+    state = models.CharField(max_length=100, blank=True, null=True)
+    country = models.CharField(max_length=100, default='India')
+    pincode = models.CharField(max_length=10, blank=True, null=True)
+    gstin = models.CharField(max_length=20, blank=True, null=True, verbose_name='GSTIN')
+    pan = models.CharField(max_length=15, blank=True, null=True, verbose_name='PAN')
+    logo = models.ImageField(upload_to='company_logos/', blank=True, null=True)
+    currency = models.CharField(max_length=5, default='INR')
+    currency_symbol = models.CharField(max_length=5, default='₹')
+    financial_year_start = models.IntegerField(default=4, help_text='Month number (1-12)')
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'companies'
+        verbose_name_plural = 'Companies'
+        ordering = ['name']
+
+    def __str__(self):
+        return self.name
+
+
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     phone = models.CharField(max_length=20, blank=True, null=True)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='users',
+        help_text='Company this user belongs to. NULL for superadmins.'
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -22,13 +57,19 @@ class User(AbstractUser):
 
 
 class Role(models.Model):
-    name = models.CharField(max_length=100, unique=True)
+    name = models.CharField(max_length=100)
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='roles',
+        help_text='Company-scoped role. NULL = global role.'
+    )
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'roles'
+        unique_together = ('name', 'company')
 
     def __str__(self):
         return self.name
@@ -85,6 +126,10 @@ class UserRole(models.Model):
 
 class AuditLog(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    company = models.ForeignKey(
+        Company, on_delete=models.CASCADE, null=True, blank=True,
+        related_name='audit_logs'
+    )
     action = models.CharField(max_length=50)
     model_name = models.CharField(max_length=100)
     object_id = models.CharField(max_length=50)
