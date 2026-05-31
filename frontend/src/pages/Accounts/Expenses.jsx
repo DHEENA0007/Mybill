@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit2, Trash2, CreditCard, Search, Filter, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, CreditCard, Search, Filter, X, ChevronDown, ChevronUp } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { getExpenses, createExpense, updateExpense, deleteExpense, getExpenseCategories, getExpenseSubcategories } from '../../api/accounts';
 import Modal from '../../components/UI/Modal';
@@ -9,15 +9,31 @@ import Input from '../../components/UI/Input';
 import Select from '../../components/UI/Select';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
-import Pagination from '../../components/UI/Pagination';
 
 const fmt = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+
+const groupByDate = (expenses) => {
+  const groups = {};
+  expenses.forEach(expense => {
+    if (!groups[expense.date]) {
+      groups[expense.date] = [];
+    }
+    groups[expense.date].push(expense);
+  });
+  return groups;
+};
+
+const formatDate = (dateStr) => {
+  const d = new Date(dateStr + 'T00:00:00');
+  const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+  return d.toLocaleDateString('en-IN', options);
+};
 
 const emptyForm = { subcategory: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' };
 
 export default function Expenses() {
   const qc = useQueryClient();
-  const [page, setPage] = useState(1);
+  const [expandedDates, setExpandedDates] = useState({});
   const [filters, setFilters] = useState({ category: '', subcategory: '', date_from: '', date_to: '', search: '' });
   const [showFilters, setShowFilters] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -30,9 +46,13 @@ export default function Expenses() {
     Object.entries(filters).filter(([, v]) => v)
   );
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['expenses', page, activeFilters],
-    queryFn: () => getExpenses({ page, ...activeFilters }).then(r => r.data),
+  // Fetch ALL expenses without pagination
+  const { data: allExpensesData, isLoading } = useQuery({
+    queryKey: ['expenses', activeFilters],
+    queryFn: () => getExpenses({ page: 1, limit: 10000, ...activeFilters }).then(r => {
+      const results = r.data?.results || r.data || [];
+      return Array.isArray(results) ? results : (results?.results || []);
+    }),
   });
 
   const { data: categories } = useQuery({
@@ -124,13 +144,9 @@ export default function Expenses() {
     });
   };
 
-  const clearFilters = () => { setFilters({ category: '', subcategory: '', date_from: '', date_to: '', search: '' }); setPage(1); };
-
-  const results = data?.results || data || [];
-  const count = data?.count || results.length;
-  const totalPages = Math.ceil(count / 20);
-
-  const totalFiltered = results.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
+  const clearFilters = () => { 
+    setFilters({ category: '', subcategory: '', date_from: '', date_to: '', search: '' }); 
+  };
 
   return (
     <div className="space-y-5">
@@ -151,7 +167,7 @@ export default function Expenses() {
             <input
               type="text"
               value={filters.search}
-              onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); setPage(1); }}
+              onChange={(e) => { setFilters(f => ({ ...f, search: e.target.value })); }}
               placeholder="Search by remarks..."
               className="w-full pl-9 pr-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
@@ -163,16 +179,16 @@ export default function Expenses() {
 
         {showFilters && (
           <div className="px-4 pb-4 pt-0 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Select label="Category" value={filters.category} onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value, subcategory: '' })); setPage(1); }}>
+            <Select label="Category" value={filters.category} onChange={(e) => { setFilters(f => ({ ...f, category: e.target.value, subcategory: '' })); }}>
               <option value="">All Categories</option>
               {(categories || []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </Select>
-            <Select label="Subcategory" value={filters.subcategory} onChange={(e) => { setFilters(f => ({ ...f, subcategory: e.target.value })); setPage(1); }} disabled={!filters.category}>
+            <Select label="Subcategory" value={filters.subcategory} onChange={(e) => { setFilters(f => ({ ...f, subcategory: e.target.value })); }} disabled={!filters.category}>
               <option value="">All Subcategories</option>
               {(filterSubcategories || []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </Select>
-            <Input label="From Date" type="date" value={filters.date_from} onChange={(e) => { setFilters(f => ({ ...f, date_from: e.target.value })); setPage(1); }} />
-            <Input label="To Date" type="date" value={filters.date_to} onChange={(e) => { setFilters(f => ({ ...f, date_to: e.target.value })); setPage(1); }} />
+            <Input label="From Date" type="date" value={filters.date_from} onChange={(e) => { setFilters(f => ({ ...f, date_from: e.target.value })); }} />
+            <Input label="To Date" type="date" value={filters.date_to} onChange={(e) => { setFilters(f => ({ ...f, date_to: e.target.value })); }} />
             {Object.keys(activeFilters).length > 0 && (
               <div className="lg:col-span-4">
                 <button onClick={clearFilters} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">
@@ -184,71 +200,92 @@ export default function Expenses() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+      {/* Expenses by Day */}
+      <div className="space-y-4">
         {isLoading ? (
-          <div className="flex items-center justify-center py-16"><LoadingSpinner size="lg" /></div>
-        ) : !results.length ? (
-          <div className="text-center py-16">
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex items-center justify-center py-16">
+            <LoadingSpinner size="lg" />
+          </div>
+        ) : !allExpensesData || allExpensesData.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm text-center py-16">
             <CreditCard className="w-12 h-12 text-gray-300 mx-auto mb-3" />
             <p className="text-gray-500 font-medium">No expenses found</p>
             <p className="text-sm text-gray-400 mt-1">Click "Add Expense" to record your first expense</p>
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50/50">
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Subcategory</th>
-                    <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
-                    <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Remarks</th>
-                    <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {results.map(item => (
-                    <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors">
-                      <td className="py-3.5 px-4 text-gray-700 font-medium">{item.date}</td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                          {item.category_name}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
-                          {item.subcategory_name}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-right font-semibold text-red-600">{fmt(item.amount)}</td>
-                      <td className="py-3.5 px-4 text-gray-500 max-w-xs truncate">{item.remarks || '-'}</td>
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button onClick={() => openEdit(item)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => setDeleteTarget(item)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+            {Object.entries(groupByDate(allExpensesData))
+              .sort(([dateA], [dateB]) => dateB.localeCompare(dateA))
+              .map(([date, expenses]) => {
+                const dayTotal = expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0);
+                const isExpanded = expandedDates[date] !== false;
+                
+                return (
+                  <div key={date} className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                    {/* Day Header */}
+                    <button
+                      onClick={() => setExpandedDates(d => ({ ...d, [date]: !d[date] }))}
+                      className="w-full flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                        <div className="flex flex-col items-start">
+                          <p className="font-semibold text-gray-900">{formatDate(date)}</p>
+                          <p className="text-xs text-gray-500">{expenses.length} expense{expenses.length !== 1 ? 's' : ''}</p>
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                {results.length > 0 && (
-                  <tfoot>
-                    <tr className="bg-gray-50">
-                      <td className="py-3 px-4 font-semibold text-gray-700" colSpan={3}>Page Total</td>
-                      <td className="py-3 px-4 text-right font-bold text-red-600">{fmt(totalFiltered)}</td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
-            </div>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} count={count} />
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-red-600">{fmt(dayTotal)}</p>
+                      </div>
+                    </button>
+
+                    {/* Day Expenses Table */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="bg-gray-50/50 border-b border-gray-100">
+                              <th className="py-2.5 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
+                              <th className="py-2.5 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Subcategory</th>
+                              <th className="py-2.5 px-4 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
+                              <th className="py-2.5 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Remarks</th>
+                              <th className="py-2.5 px-4 text-right text-xs font-semibold text-gray-500 uppercase">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {expenses.map(item => (
+                              <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors">
+                                <td className="py-3 px-4">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
+                                    {item.category_name}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                                    {item.subcategory_name}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 text-right font-semibold text-red-600">{fmt(item.amount)}</td>
+                                <td className="py-3 px-4 text-gray-500 max-w-xs truncate">{item.remarks || '-'}</td>
+                                <td className="py-3 px-4 text-right">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <button onClick={() => openEdit(item)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                      <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    <button onClick={() => setDeleteTarget(item)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                      <Trash2 className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
           </>
         )}
       </div>
