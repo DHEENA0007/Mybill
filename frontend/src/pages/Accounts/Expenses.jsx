@@ -149,32 +149,51 @@ export default function Expenses() {
     setFilters({ category: '', subcategory: '', date_from: '', date_to: '', search: '' }); 
   };
 
-  // Get sorted dates for navigation
-  const sortedDates = allExpensesData 
-    ? Object.keys(groupByDate(allExpensesData))
-        .sort((a, b) => new Date(b) - new Date(a))
+  // Get sorted dates for navigation - all dates, not just with expenses
+  const allDates = allExpensesData && allExpensesData.length > 0
+    ? Object.keys(groupByDate(allExpensesData)).sort((a, b) => new Date(b) - new Date(a))
     : [];
 
+  // Get min and max dates from data
+  const minDate = allDates.length > 0 ? allDates[allDates.length - 1] : null; // oldest
+  const maxDate = allDates.length > 0 ? allDates[0] : null; // newest
+
   // Set initial selected date if not set
-  if (allExpensesData && !selectedDate && sortedDates.length > 0) {
-    setSelectedDate(sortedDates[0]);
+  if (allExpensesData && !selectedDate && maxDate) {
+    setSelectedDate(maxDate);
   }
 
-  const currentDateIndex = sortedDates.indexOf(selectedDate);
-  const hasPreviousDay = currentDateIndex < sortedDates.length - 1;
-  const hasNextDay = currentDateIndex > 0;
-
   const goToPreviousDay = () => {
-    if (hasPreviousDay) {
-      setSelectedDate(sortedDates[currentDateIndex + 1]);
+    const currentDate = new Date(selectedDate);
+    const previousDate = new Date(currentDate);
+    previousDate.setDate(previousDate.getDate() - 1);
+    const prevDateStr = previousDate.toISOString().split('T')[0];
+    
+    if (minDate && prevDateStr >= minDate) {
+      setSelectedDate(prevDateStr);
     }
   };
 
   const goToNextDay = () => {
-    if (hasNextDay) {
-      setSelectedDate(sortedDates[currentDateIndex - 1]);
+    const currentDate = new Date(selectedDate);
+    const nextDate = new Date(currentDate);
+    nextDate.setDate(nextDate.getDate() + 1);
+    const nextDateStr = nextDate.toISOString().split('T')[0];
+    
+    if (maxDate && nextDateStr <= maxDate) {
+      setSelectedDate(nextDateStr);
     }
   };
+
+  const handleDateChange = (e) => {
+    const newDate = e.target.value;
+    if (minDate && maxDate && newDate >= minDate && newDate <= maxDate) {
+      setSelectedDate(newDate);
+    }
+  };
+
+  const canGoPrevious = selectedDate && minDate && selectedDate > minDate;
+  const canGoNext = selectedDate && maxDate && selectedDate < maxDate;
 
   return (
     <div className="space-y-5">
@@ -190,40 +209,45 @@ export default function Expenses() {
       {/* Day Navigation */}
       {allExpensesData && allExpensesData.length > 0 && (
         <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200 shadow-sm p-4">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <button
               onClick={goToPreviousDay}
-              disabled={!hasPreviousDay}
+              disabled={!canGoPrevious}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
-                hasPreviousDay
+                canGoPrevious
                   ? 'bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
               }`}
             >
               <ChevronLeft className="w-4 h-4" />
-              Previous Day
+              <span className="hidden sm:inline">Previous Day</span>
             </button>
 
-            <div className="text-center flex-1">
-              <p className="text-sm text-gray-600 font-medium">Viewing</p>
-              <p className="text-lg font-bold text-indigo-600">
-                {selectedDate && formatDate(selectedDate)}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {sortedDates.indexOf(selectedDate) + 1} of {sortedDates.length} days
+            <div className="text-center flex-1 min-w-0">
+              <p className="text-sm text-gray-600 font-medium">Select Date</p>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={handleDateChange}
+                min={minDate}
+                max={maxDate}
+                className="mt-1 px-3 py-2 text-sm font-bold text-indigo-600 border border-indigo-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                {allDates.length > 0 && `From ${formatDate(minDate)} to ${formatDate(maxDate)}`}
               </p>
             </div>
 
             <button
               onClick={goToNextDay}
-              disabled={!hasNextDay}
+              disabled={!canGoNext}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
-                hasNextDay
+                canGoNext
                   ? 'bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-200'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
               }`}
             >
-              Next Day
+              <span className="hidden sm:inline">Next Day</span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
