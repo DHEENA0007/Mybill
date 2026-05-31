@@ -332,6 +332,7 @@ export default function Expenses() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-gray-100 bg-gray-50/50">
+                          <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Date</th>
                           <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Category</th>
                           <th className="py-3 px-4 text-left text-xs font-semibold text-gray-500 uppercase">Subcategory</th>
                           <th className="py-3 px-4 text-right text-xs font-semibold text-gray-500 uppercase">Amount</th>
@@ -342,6 +343,9 @@ export default function Expenses() {
                       <tbody>
                         {selectedDayExpenses.map(item => (
                           <tr key={item.id} className="border-b border-gray-50 hover:bg-gray-50/70 transition-colors">
+                            <td className="py-3.5 px-4 text-gray-700 font-medium whitespace-nowrap">
+                              {formatDate(item.date)}
+                            </td>
                             <td className="py-3.5 px-4">
                               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
                                 {item.category_name}
@@ -369,7 +373,7 @@ export default function Expenses() {
                       </tbody>
                       <tfoot>
                         <tr className="bg-gray-50 border-t border-gray-100">
-                          <td className="py-3 px-4 font-semibold text-gray-700" colSpan={2}>Day Total</td>
+                          <td className="py-3 px-4 font-semibold text-gray-700" colSpan={3}>Day Total</td>
                           <td className="py-3 px-4 text-right font-bold text-red-600">{fmt(dayTotal)}</td>
                           <td colSpan={2}></td>
                         </tr>
