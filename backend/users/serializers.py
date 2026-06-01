@@ -4,8 +4,8 @@ from .models import User, Role, Permission, RolePermission, UserRole, AuditLog, 
 
 
 def get_user_permissions(user):
-    """Return list of permission codenames for the user (all if superuser)."""
-    if user.is_superuser:
+    """Return list of permission codenames for the user (all if superuser or company admin)."""
+    if user.is_superuser or user.is_staff:
         return list(Permission.objects.values_list('codename', flat=True))
     return list(
         user.user_roles

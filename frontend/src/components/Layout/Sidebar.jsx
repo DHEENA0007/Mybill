@@ -199,7 +199,7 @@ export default function Sidebar({ onCloseMobile }) {
             <div className="flex-1 min-w-0">
               <p className="text-sm text-white font-medium truncate">{user?.username || 'User'}</p>
               <p className="text-xs text-slate-400 truncate">
-                {isSuperAdmin ? 'Super Admin' : (user?.roles?.length ? user.roles.join(', ') : 'Staff')}
+                {isSuperAdmin ? 'Super Admin' : (user?.is_staff ? 'Company Admin' : (user?.roles?.length ? user.roles.join(', ') : 'Staff'))}
               </p>
             </div>
             <button onClick={handleLogout} className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg p-1.5 transition-colors" title="Logout">
