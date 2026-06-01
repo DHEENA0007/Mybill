@@ -30,7 +30,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'admin_count', 'user_count',
             'created_at', 'updated_at',
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at']
 
     def get_admin_count(self, obj):
         return obj.users.filter(is_staff=True).count()
