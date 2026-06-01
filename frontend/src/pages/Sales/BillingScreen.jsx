@@ -23,7 +23,7 @@ export default function BillingScreen() {
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState('');
-  const [taxRate, setTaxRate] = useState(0);
+  const [isTaxInvoice, setIsTaxInvoice] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -51,7 +51,14 @@ export default function BillingScreen() {
     setCart(c => {
       const existing = c.find(i => i.product === product.id);
       if (existing) return c.map(i => i.product === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...c, { product: product.id, name: product.name, selling_price: product.selling_price, quantity: 1, unit_price: product.selling_price }];
+      return [...c, { 
+        product: product.id, 
+        name: product.name, 
+        selling_price: product.selling_price, 
+        quantity: 1, 
+        unit_price: product.selling_price,
+        tax_percentage: product.tax_percentage || 0
+      }];
     });
     setProductSearch('');
     setShowProductDropdown(false);
@@ -62,7 +69,7 @@ export default function BillingScreen() {
   const removeFromCart = (idx) => setCart(c => c.filter((_, j) => j !== idx));
 
   const subtotal = cart.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
-  const taxAmount = (subtotal * taxRate) / 100;
+  const taxAmount = isTaxInvoice ? cart.reduce((s, i) => s + (i.quantity * i.unit_price * (i.tax_percentage / 100)), 0) : 0;
   const total = subtotal + taxAmount;
   const balance = total - (parseFloat(paidAmount) || 0);
 
@@ -77,7 +84,13 @@ export default function BillingScreen() {
         paid_amount: parseFloat(paidAmount) || 0,
         payment_method: paymentMethod,
         notes,
-        items: cart.map(i => ({ product: i.product, quantity: parseInt(i.quantity), unit_price: parseFloat(i.unit_price) })),
+        is_tax_invoice: isTaxInvoice,
+        items: cart.map(i => ({ 
+          product: i.product, 
+          quantity: parseInt(i.quantity), 
+          unit_price: parseFloat(i.unit_price),
+          tax_rate: isTaxInvoice ? i.tax_percentage : 0
+        })),
       };
       const res = await createInvoice(data);
       toast.success(`Invoice ${res.data.invoice_number} created!`);
@@ -186,17 +199,21 @@ export default function BillingScreen() {
         </Card>
 
         <Card>
-          <h3 className="font-semibold text-gray-800 mb-3">Order Summary</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-800">Order Summary</h3>
+            <label className="flex items-center gap-2 cursor-pointer bg-gray-50 px-2 py-1 rounded border border-gray-200">
+              <input type="checkbox" checked={isTaxInvoice} onChange={(e) => setIsTaxInvoice(e.target.checked)} className="w-4 h-4 text-indigo-600 rounded" />
+              <span className="text-xs font-medium text-gray-700">Tax Invoice</span>
+            </label>
+          </div>
           <div className="space-y-2.5 text-sm">
             <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="font-medium">{formatCurrency(subtotal)}</span></div>
-            <div className="flex justify-between items-center text-gray-600">
-              <span>Tax</span>
-              <div className="flex items-center gap-1">
-                <input type="number" value={taxRate} onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)} className="w-14 text-right border border-gray-200 rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500" />
-                <span className="text-xs text-gray-400">%</span>
+            {isTaxInvoice && (
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Tax (Auto-calculated)</span>
                 <span className="font-medium">{formatCurrency(taxAmount)}</span>
               </div>
-            </div>
+            )}
             <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-100"><span>Total</span><span className="text-indigo-600">{formatCurrency(total)}</span></div>
           </div>
         </Card>

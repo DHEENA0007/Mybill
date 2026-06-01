@@ -233,6 +233,37 @@ export default function CompanySetup() {
                     ))}
                   </select>
                 </div>
+                
+                <div className="sm:col-span-2 mt-4 pt-4 border-t border-gray-100">
+                  <h4 className="text-sm font-medium text-gray-900 mb-4">Invoice Numbering</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Tax Invoice Prefix</label>
+                      <input type="text" value={form.gst_invoice_prefix || ''} onChange={(e) => set('gst_invoice_prefix', e.target.value)}
+                        placeholder="e.g. GST-"
+                        className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Non-Tax Invoice Prefix</label>
+                      <input type="text" value={form.non_gst_invoice_prefix || ''} onChange={(e) => set('non_gst_invoice_prefix', e.target.value)}
+                        placeholder="e.g. INV-"
+                        className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">Start Number</label>
+                      <input type="number" value={form.invoice_start_number || 1} onChange={(e) => set('invoice_start_number', parseInt(e.target.value))}
+                        min="1"
+                        className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                    </div>
+                    <div className="flex items-center pt-6">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={form.reset_invoice_number_yearly ?? true} onChange={(e) => set('reset_invoice_number_yearly', e.target.checked)}
+                          className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500" />
+                        <span className="text-sm text-gray-700">Reset number yearly (on Financial Year start)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

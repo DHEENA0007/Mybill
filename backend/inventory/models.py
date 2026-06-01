@@ -27,6 +27,8 @@ class Product(models.Model):
     min_stock_level = models.IntegerField(default=10)
     barcode = models.CharField(max_length=100, unique=True, blank=True, null=True)
     image = models.ImageField(upload_to='products/', blank=True, null=True)
+    is_taxable = models.BooleanField(default=True)
+    tax_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

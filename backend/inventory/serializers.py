@@ -24,7 +24,8 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'sku', 'category', 'category_name',
             'purchase_price', 'selling_price', 'current_stock',
-            'min_stock_level', 'barcode', 'image', 'is_active',
+            'min_stock_level', 'barcode', 'image', 'is_taxable',
+            'tax_percentage', 'is_active',
             'is_low_stock', 'profit_margin', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'current_stock']
@@ -39,7 +40,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'sku', 'category', 'category_name',
             'selling_price', 'current_stock', 'min_stock_level',
-            'is_active', 'is_low_stock'
+            'is_taxable', 'tax_percentage', 'is_active', 'is_low_stock'
         ]
 
 

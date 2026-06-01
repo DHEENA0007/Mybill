@@ -16,6 +16,8 @@ export default function ProductForm({ initial, categories, onSuccess }) {
     current_stock: initial?.current_stock || 0,
     min_stock_level: initial?.min_stock_level || 5,
     barcode: initial?.barcode || '',
+    is_taxable: initial?.is_taxable !== false,
+    tax_percentage: initial?.tax_percentage || 0,
     is_active: initial?.is_active !== false,
   });
 
@@ -48,6 +50,13 @@ export default function ProductForm({ initial, categories, onSuccess }) {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </Select>
+        <Select label="Taxable" value={form.is_taxable} onChange={(e) => set('is_taxable', e.target.value === 'true')}>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </Select>
+        {form.is_taxable && (
+          <Input label="Tax Percentage (%)" type="number" value={form.tax_percentage} onChange={(e) => set('tax_percentage', e.target.value)} step="0.01" />
+        )}
         <Input label="Purchase Price" type="number" value={form.purchase_price} onChange={(e) => set('purchase_price', e.target.value)} required prefix="₹" step="0.01" />
         <Input label="Selling Price" type="number" value={form.selling_price} onChange={(e) => set('selling_price', e.target.value)} required prefix="₹" step="0.01" />
         <Input label="Current Stock" type="number" value={form.current_stock} onChange={(e) => set('current_stock', e.target.value)} />

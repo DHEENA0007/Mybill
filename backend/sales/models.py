@@ -5,15 +5,43 @@ from inventory.models import Product
 import uuid
 
 
-def generate_invoice_number():
+def generate_invoice_number(is_tax_invoice=False):
     from datetime import date
+    from users.middleware import get_current_company
+    
     today = date.today()
-    date_str = today.strftime('%Y%m%d')
-    # Get count of invoices today
-    count = SalesInvoice.objects.filter(
-        invoice_date=today
-    ).count() + 1
-    return f"INV-{date_str}-{count:04d}"
+    company = get_current_company()
+    
+    # Defaults
+    prefix = 'GST-' if is_tax_invoice else 'INV-'
+    start_number = 1
+    reset_yearly = True
+    
+    if company:
+        prefix = company.gst_invoice_prefix if is_tax_invoice else company.non_gst_invoice_prefix
+        start_number = company.invoice_start_number
+        reset_yearly = company.reset_invoice_number_yearly
+        
+        # Determine financial year start date for the current year
+        current_year = today.year
+        fy_start_month = company.financial_year_start
+        if today.month < fy_start_month:
+            fy_start_date = date(current_year - 1, fy_start_month, 1)
+        else:
+            fy_start_date = date(current_year, fy_start_month, 1)
+            
+    if company and reset_yearly:
+        # Count invoices in the current financial year of the same type
+        count = SalesInvoice.objects.filter(
+            invoice_date__gte=fy_start_date,
+            is_tax_invoice=is_tax_invoice
+        ).count()
+    else:
+        # Count all invoices of the same type
+        count = SalesInvoice.objects.filter(is_tax_invoice=is_tax_invoice).count()
+        
+    next_number = start_number + count
+    return f"{prefix}{next_number:04d}"
 
 
 class Customer(models.Model):
@@ -56,6 +84,7 @@ class SalesInvoice(models.Model):
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='invoices'
     )
+    is_tax_invoice = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,7 +97,7 @@ class SalesInvoice(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.invoice_number:
-            self.invoice_number = generate_invoice_number()
+            self.invoice_number = generate_invoice_number(self.is_tax_invoice)
         super().save(*args, **kwargs)
 
     def update_balance(self):
@@ -104,7 +133,12 @@ class InvoiceItem(models.Model):
 
 
 class InvoiceTemplate(models.Model):
+    TEMPLATE_TYPE_CHOICES = [
+        ('tax', 'Tax Invoice'),
+        ('nontax', 'Non-Tax Invoice'),
+    ]
     name = models.CharField(max_length=200)
+    template_type = models.CharField(max_length=10, choices=TEMPLATE_TYPE_CHOICES, default='nontax')
     is_default = models.BooleanField(default=False)
     logo = models.ImageField(upload_to='invoice_logos/', blank=True, null=True)
     config = models.JSONField(default=dict)
@@ -123,7 +157,7 @@ class InvoiceTemplate(models.Model):
 
     def save(self, *args, **kwargs):
         if self.is_default:
-            InvoiceTemplate.objects.filter(is_default=True).exclude(pk=self.pk).update(is_default=False)
+            InvoiceTemplate.objects.filter(is_default=True, template_type=self.template_type).exclude(pk=self.pk).update(is_default=False)
         super().save(*args, **kwargs)
 
 

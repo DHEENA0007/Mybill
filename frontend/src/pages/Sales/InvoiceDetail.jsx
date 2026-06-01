@@ -26,7 +26,12 @@ export default function InvoiceDetail() {
   const [payForm, setPayForm] = useState({ amount: '', payment_method: '' });
 
   const { data: inv, isLoading } = useQuery({ queryKey: ['invoice', id], queryFn: () => getInvoice(id).then(r => r.data) });
-  const { data: activeTemplate } = useQuery({ queryKey: ['invoice-template-default'], queryFn: () => getDefaultTemplate().then(r => r.data), staleTime: 60000 });
+  const { data: activeTemplate } = useQuery({ 
+    queryKey: ['invoice-template-default', inv?.is_tax_invoice], 
+    queryFn: () => getDefaultTemplate(inv?.is_tax_invoice ? 'tax' : 'nontax').then(r => r.data), 
+    staleTime: 60000,
+    enabled: !!inv
+  });
 
   const payMut = useMutation({
     mutationFn: (d) => recordInvoicePayment(id, d),

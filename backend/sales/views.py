@@ -170,9 +170,13 @@ class InvoiceTemplateViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def default(self, request):
-        template = InvoiceTemplate.objects.filter(is_default=True).first()
+        template_type = request.query_params.get('type', 'nontax')
+        template = InvoiceTemplate.objects.filter(is_default=True, template_type=template_type).first()
         if not template:
-            template = InvoiceTemplate.objects.first()
+            template = InvoiceTemplate.objects.filter(template_type=template_type).first()
+        if not template:
+            # Fallback
+            template = InvoiceTemplate.objects.filter(is_default=True).first()
         if not template:
             return Response(None)
         serializer = self.get_serializer(template)

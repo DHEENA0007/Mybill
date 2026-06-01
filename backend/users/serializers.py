@@ -26,7 +26,8 @@ class CompanySerializer(serializers.ModelSerializer):
             'id', 'name', 'slug', 'email', 'phone',
             'address', 'city', 'state', 'country', 'pincode',
             'gstin', 'pan', 'logo', 'currency', 'currency_symbol',
-            'financial_year_start', 'is_active',
+            'financial_year_start', 'gst_invoice_prefix', 'non_gst_invoice_prefix',
+            'invoice_start_number', 'reset_invoice_number_yearly', 'is_active',
             'admin_count', 'user_count',
             'created_at', 'updated_at',
         ]
@@ -47,7 +48,8 @@ class CompanySetupSerializer(serializers.ModelSerializer):
             'id', 'name', 'email', 'phone',
             'address', 'city', 'state', 'country', 'pincode',
             'gstin', 'pan', 'logo', 'currency', 'currency_symbol',
-            'financial_year_start',
+            'financial_year_start', 'gst_invoice_prefix', 'non_gst_invoice_prefix',
+            'invoice_start_number', 'reset_invoice_number_yearly',
         ]
         read_only_fields = ['id']
 

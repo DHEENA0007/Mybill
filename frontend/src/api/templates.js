@@ -2,7 +2,7 @@ import api from './axios';
 
 export const getTemplates = () => api.get('/invoice-templates/');
 export const getTemplate = (id) => api.get(`/invoice-templates/${id}/`);
-export const getDefaultTemplate = () => api.get('/invoice-templates/default/');
+export const getDefaultTemplate = (type = 'nontax') => api.get(`/invoice-templates/default/?type=${type}`);
 export const createTemplate = (data) => api.post('/invoice-templates/', data);
 export const updateTemplate = (id, data) => api.patch(`/invoice-templates/${id}/`, data);
 export const deleteTemplate = (id) => api.delete(`/invoice-templates/${id}/`);

@@ -59,7 +59,7 @@ class SalesInvoiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesInvoice
         fields = [
-            'id', 'invoice_number', 'customer', 'customer_name',
+            'id', 'invoice_number', 'customer', 'customer_name', 'is_tax_invoice',
             'invoice_date', 'subtotal', 'tax_amount', 'discount_amount',
             'total_amount', 'paid_amount', 'balance_due', 'status', 'notes',
             'items', 'created_by', 'created_by_name', 'created_at', 'updated_at'
@@ -75,7 +75,7 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SalesInvoice
-        fields = ['customer', 'invoice_date', 'discount_amount', 'paid_amount', 'notes', 'items']
+        fields = ['customer', 'is_tax_invoice', 'invoice_date', 'discount_amount', 'paid_amount', 'notes', 'items']
 
     def validate_items(self, value):
         if not value:
@@ -152,7 +152,7 @@ class SalesInvoiceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = SalesInvoice
         fields = [
-            'id', 'invoice_number', 'customer', 'customer_name',
+            'id', 'invoice_number', 'customer', 'customer_name', 'is_tax_invoice',
             'invoice_date', 'total_amount', 'paid_amount', 'balance_due',
             'status', 'item_count', 'created_at'
         ]
@@ -180,7 +180,7 @@ class InvoiceTemplateSerializer(serializers.ModelSerializer):
     class Meta:
         model = InvoiceTemplate
         fields = [
-            'id', 'name', 'is_default', 'logo', 'logo_url', 'config',
+            'id', 'name', 'template_type', 'is_default', 'logo', 'logo_url', 'config',
             'created_by', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_by', 'created_at', 'updated_at', 'logo_url']

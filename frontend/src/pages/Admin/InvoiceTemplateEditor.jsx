@@ -235,12 +235,12 @@ export default function InvoiceTemplateEditor() {
   });
 
   const saveMut = useMutation({
-    mutationFn: async ({ name, config }) => {
+    mutationFn: async ({ name, template_type, config }) => {
       let tpl;
       if (isEdit) {
-        tpl = await updateTemplate(id, { name, config });
+        tpl = await updateTemplate(id, { name, template_type, config });
       } else {
-        tpl = await createTemplate({ name, config });
+        tpl = await createTemplate({ name, template_type, config });
       }
       const tplId = tpl.data.id;
       if (pendingLogo?.file) {
@@ -295,6 +295,18 @@ export default function InvoiceTemplateEditor() {
           className="flex-1 max-w-xs border-0 border-b-2 border-transparent focus:border-indigo-500 px-1 py-0.5 text-sm font-semibold text-gray-800 focus:outline-none transition-colors bg-transparent"
           placeholder="Template Name"
         />
+        
+        <div className="ml-4 flex items-center gap-2 border-l border-gray-200 pl-4">
+          <span className="text-sm font-medium text-gray-500">Type:</span>
+          <select 
+            value={config.template_type || 'nontax'} 
+            onChange={(e) => cfg('template_type', e.target.value)}
+            className="border-none bg-transparent text-sm font-medium text-gray-800 focus:ring-0 cursor-pointer outline-none"
+          >
+            <option value="tax">Tax Invoice</option>
+            <option value="nontax">Non-Tax Invoice</option>
+          </select>
+        </div>
 
         <div className="ml-auto flex items-center gap-2">
           {(savedId || isEdit) && (
@@ -307,7 +319,7 @@ export default function InvoiceTemplateEditor() {
             </button>
           )}
           <button
-            onClick={() => saveMut.mutate({ name, config })}
+            onClick={() => saveMut.mutate({ name, template_type: config.template_type || 'nontax', config })}
             disabled={saveMut.isPending}
             className="flex items-center gap-1.5 text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-1.5 rounded-lg transition-colors disabled:opacity-60"
           >
