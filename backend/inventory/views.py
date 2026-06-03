@@ -51,10 +51,25 @@ class ProductViewSet(TenantViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        from django.db import IntegrityError
+        from rest_framework.exceptions import ValidationError
+
         user = self.request.user
         company = user.company if (getattr(user, 'company_id', None) and not getattr(user, 'is_superuser', False)) else None
         
-        sku = serializer.validated_data.get('sku', '')
+        try:
+            if company:
+                product = serializer.save(company=company)
+            else:
+                product = serializer.save()
+        except IntegrityError as e:
+            if 'name' in str(e).lower() and 'unique' in str(e).lower():
+                raise ValidationError({"name": ["A product with this name already exists."]})
+            if 'sku' in str(e).lower() and 'unique' in str(e).lower():
+                raise ValidationError({"sku": ["A product with this SKU already exists."]})
+            raise ValidationError({"detail": ["Database integrity error. Check for duplicate values."]})
+
+        sku = product.sku
         if sku:
             prefixes = ProductPrefix.objects.filter(company=company)
             for p in prefixes:
@@ -66,11 +81,6 @@ class ProductViewSet(TenantViewSet):
                             p.current_number = num
                             p.save()
                     break
-
-        if company:
-            serializer.save(company=company)
-        else:
-            serializer.save()
 
     @action(detail=False, methods=['get'])
     def low_stock_alert(self, request):
