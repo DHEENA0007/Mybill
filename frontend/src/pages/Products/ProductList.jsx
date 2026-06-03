@@ -14,12 +14,14 @@ import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import ProductForm from './ProductForm';
 import usePermission from '../../hooks/usePermission';
+import ProductPrefixModal from './ProductPrefixModal';
 
 export default function ProductList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState('');
   const [formOpen, setFormOpen] = useState(false);
+  const [prefixModalOpen, setPrefixModalOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const qc = useQueryClient();
@@ -85,11 +87,18 @@ export default function ProductList() {
             {Array.isArray(categories) ? categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>) : null}
           </select>
         </div>
-        {can('inventory.add') && (
-          <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setFormOpen(true); }}>
-            Add Product
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {can('inventory.edit') && (
+            <Button variant="secondary" onClick={() => setPrefixModalOpen(true)}>
+              Prefix Config
+            </Button>
+          )}
+          {can('inventory.add') && (
+            <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setFormOpen(true); }}>
+              Add Product
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card padding={false}>
@@ -104,6 +113,8 @@ export default function ProductList() {
           onSuccess={() => { setFormOpen(false); setEditItem(null); qc.invalidateQueries(['products']); }}
         />
       </Modal>
+
+      <ProductPrefixModal open={prefixModalOpen} onClose={() => setPrefixModalOpen(false)} />
 
       <ConfirmDialog
         open={!!deleteId}

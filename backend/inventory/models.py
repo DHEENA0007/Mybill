@@ -87,3 +87,20 @@ class StockTransaction(models.Model):
     def __str__(self):
         direction = '+' if self.quantity > 0 else ''
         return f"{self.product.name} | {self.transaction_type} | {direction}{self.quantity}"
+
+class ProductPrefix(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
+    prefix = models.CharField(max_length=50)
+    start_number = models.IntegerField(default=1)
+    padding = models.IntegerField(default=3)
+    current_number = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'product_prefixes'
+        unique_together = ('company', 'prefix')
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.prefix

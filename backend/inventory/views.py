@@ -6,10 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.db.models import Q, Sum, F
 
-from .models import Category, Product, StockTransaction
+from .models import Category, Product, StockTransaction, ProductPrefix
 from .serializers import (
     CategorySerializer, ProductSerializer, ProductListSerializer,
-    StockTransactionSerializer, StockAdjustmentSerializer
+    StockTransactionSerializer, StockAdjustmentSerializer,
+    ProductPrefixSerializer
 )
 
 
@@ -48,6 +49,28 @@ class ProductViewSet(TenantViewSet):
         if low_stock == 'true':
             queryset = queryset.filter(current_stock__lte=F('min_stock_level'))
         return queryset
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        company = user.company if (getattr(user, 'company_id', None) and not getattr(user, 'is_superuser', False)) else None
+        
+        sku = serializer.validated_data.get('sku', '')
+        if sku:
+            prefixes = ProductPrefix.objects.filter(company=company)
+            for p in prefixes:
+                if sku.startswith(p.prefix):
+                    num_str = sku[len(p.prefix):]
+                    if num_str.isdigit():
+                        num = int(num_str)
+                        if num > p.current_number:
+                            p.current_number = num
+                            p.save()
+                    break
+
+        if company:
+            serializer.save(company=company)
+        else:
+            serializer.save()
 
     @action(detail=False, methods=['get'])
     def low_stock_alert(self, request):
@@ -110,3 +133,15 @@ class StockTransactionViewSet(ReadOnlyTenantViewSet):
         if transaction_type:
             queryset = queryset.filter(transaction_type=transaction_type)
         return queryset
+
+class ProductPrefixViewSet(TenantViewSet):
+    queryset = ProductPrefix.objects.all().order_by('-created_at')
+    serializer_class = ProductPrefixSerializer
+    permission_classes = [IsAuthenticated]
+
+    @action(detail=True, methods=['get'])
+    def next_sku(self, request, pk=None):
+        prefix = self.get_object()
+        next_num = max(prefix.start_number, prefix.current_number + 1)
+        sku = f"{prefix.prefix}{str(next_num).zfill(prefix.padding)}"
+        return Response({'sku': sku})

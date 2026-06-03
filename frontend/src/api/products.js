@@ -12,3 +12,9 @@ export const getCategories = (params) => api.get('/categories/', { params });
 export const createCategory = (data) => api.post('/categories/', data);
 export const updateCategory = (id, data) => api.put(`/categories/${id}/`, data);
 export const deleteCategory = (id) => api.delete(`/categories/${id}/`);
+
+export const getProductPrefixes = () => api.get('/product-prefixes/');
+export const createProductPrefix = (data) => api.post('/product-prefixes/', data);
+export const updateProductPrefix = (id, data) => api.put(`/product-prefixes/${id}/`, data);
+export const deleteProductPrefix = (id) => api.delete(`/product-prefixes/${id}/`);
+export const getNextSku = (id) => api.get(`/product-prefixes/${id}/next_sku/`);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { createProduct, updateProduct } from '../../api/products';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { createProduct, updateProduct, getProductPrefixes, getNextSku } from '../../api/products';
 import Input from '../../components/UI/Input';
 import Select from '../../components/UI/Select';
 import Button from '../../components/UI/Button';
@@ -21,7 +21,25 @@ export default function ProductForm({ initial, categories, onSuccess }) {
     is_active: initial?.is_active !== false,
   });
 
+  const { data: prefixes } = useQuery({
+    queryKey: ['product-prefixes'],
+    queryFn: () => getProductPrefixes().then(r => r.data?.results || r.data),
+  });
+
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handlePrefixChange = async (e) => {
+    const prefixId = e.target.value;
+    if (!prefixId) return;
+    try {
+      const res = await getNextSku(prefixId);
+      if (res.data?.sku) {
+        set('sku', res.data.sku);
+      }
+    } catch (err) {
+      toast.error('Failed to generate SKU');
+    }
+  };
 
   const mutation = useMutation({
     mutationFn: (data) => initial ? updateProduct(initial.id, data) : createProduct(data),
@@ -40,7 +58,28 @@ export default function ProductForm({ initial, categories, onSuccess }) {
         <div className="col-span-2">
           <Input label="Product Name" value={form.name} onChange={(e) => set('name', e.target.value)} required placeholder="Enter product name" />
         </div>
-        <Input label="SKU Code" value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. PRD-001" />
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">SKU Code</label>
+          <div className="flex gap-2">
+            <select
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 w-1/3"
+              onChange={handlePrefixChange}
+              defaultValue=""
+            >
+              <option value="" disabled>Prefix</option>
+              {Array.isArray(prefixes) && prefixes.map(p => (
+                <option key={p.id} value={p.id}>{p.prefix}</option>
+              ))}
+            </select>
+            <input 
+              type="text" 
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 flex-1"
+              value={form.sku} 
+              onChange={(e) => set('sku', e.target.value)} 
+              placeholder="e.g. PRD-001" 
+            />
+          </div>
+        </div>
         <Input label="Barcode" value={form.barcode} onChange={(e) => set('barcode', e.target.value)} placeholder="Barcode number" />
         <Select label="Category" value={form.category} onChange={(e) => set('category', e.target.value)} required>
           <option value="">Select category</option>

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, StockTransaction
+from .models import Category, Product, StockTransaction, ProductPrefix
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -63,3 +63,9 @@ class StockAdjustmentSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     quantity = serializers.IntegerField()
     notes = serializers.CharField(required=False, allow_blank=True)
+
+class ProductPrefixSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductPrefix
+        fields = ['id', 'prefix', 'start_number', 'padding', 'current_number', 'created_at']
+        read_only_fields = ['id', 'created_at']
