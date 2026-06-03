@@ -184,7 +184,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CompanyAdminSerializer(serializers.ModelSerializer):
     """Serializer for creating company admins from superadmin portal."""
-    password = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=False)
     company_name = serializers.CharField(source='company.name', read_only=True, default=None)
 
     class Meta:
@@ -198,11 +198,14 @@ class CompanyAdminSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login', 'is_superuser']
 
     def create(self, validated_data):
-        password = validated_data.pop('password')
+        password = validated_data.pop('password', None)
         validated_data['is_staff'] = True
         validated_data['is_superuser'] = False
         user = User(**validated_data)
-        user.set_password(password)
+        if password:
+            user.set_password(password)
+        else:
+            user.set_unusable_password()
         user.save()
         return user
 

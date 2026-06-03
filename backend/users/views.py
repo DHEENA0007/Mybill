@@ -181,9 +181,9 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], permission_classes=[IsAuthenticated])
     def me(self, request):
-        from .serializers import get_user_permissions
         serializer = self.get_serializer(request.user)
         data = serializer.data
+        from .serializers import get_user_permissions
         data['permissions'] = get_user_permissions(request.user)
         data['allowed_portals'] = request.user.allowed_portals or []
         # Include company details

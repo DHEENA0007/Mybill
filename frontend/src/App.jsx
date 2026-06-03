@@ -78,7 +78,23 @@ function PortalRoute({ portal, children }) {
   // Redirect to the first allowed portal, or fallback
   if (portal === 'accounts' && portals.includes('billing')) return <Navigate to="/" replace />;
   if (portal === 'billing' && portals.includes('accounts')) return <Navigate to="/accounts" replace />;
-  return <Navigate to="/" replace />;
+  
+  // If no portals are allowed, returning to '/' creates an infinite loop. 
+  // Let's return a simple unauthorized message.
+  return (
+    <div className="flex flex-col items-center justify-center h-screen bg-gray-50">
+      <div className="p-8 bg-white rounded-xl shadow-lg text-center max-w-md">
+        <h2 className="text-2xl font-bold text-red-600 mb-2">Access Denied</h2>
+        <p className="text-gray-600 mb-6">You do not have permission to access any portals.</p>
+        <button 
+          onClick={() => { useAuthStore.getState().logout(); window.location.href = '/login'; }}
+          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+        >
+          Back to Login
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
