@@ -86,145 +86,131 @@ export default function Reports() {
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const generateReportHTML = () => {
-    // Group Incomes by Type
-    const incGroups = {};
-    incomes.forEach(i => {
-      const typeName = i.income_type_name || 'Other Income';
-      if (!incGroups[typeName]) incGroups[typeName] = [];
-      incGroups[typeName].push(i);
-    });
+    // We format the date range
+    const dObj = new Date(dateFrom);
+    const dayName = dObj.toLocaleDateString('en-US', { weekday: 'long' }).toUpperCase();
+    const dateFormatted = dObj.toLocaleDateString('en-GB'); // DD/MM/YYYY
+    const prevDayObj = new Date(dObj);
+    prevDayObj.setDate(prevDayObj.getDate() - 1);
+    const prevDateFormatted = prevDayObj.toLocaleDateString('en-GB');
 
-    // Group Expenses by Category & Subcategory
+    // Group expenses by category
     const expGroups = {};
     expenses.forEach(e => {
       const catName = e.category_name || 'Other Category';
-      const subName = e.subcategory_name || 'General';
-      if (!expGroups[catName]) expGroups[catName] = {};
-      if (!expGroups[catName][subName]) expGroups[catName][subName] = [];
-      expGroups[catName][subName].push(e);
+      if (!expGroups[catName]) expGroups[catName] = [];
+      expGroups[catName].push(e);
     });
 
     let html = `
-      <div style="font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #1f2937; padding: 20mm 15mm; line-height: 1.5; background-color: #ffffff;">
-        <div style="text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 16px; margin-bottom: 24px;">
-          <h1 style="margin: 0; font-size: 26px; color: #1e3a8a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Statement of Accounts</h1>
-          <p style="margin: 4px 0 0 0; color: #4b5563; font-size: 13px;">DHEENA0007 / Mybill - Financial Portal</p>
-          <div style="font-weight: 600; color: #2563eb; margin-top: 6px;">Period: ${dateFrom} to ${dateTo}</div>
+      <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #1e293b; padding: 15mm 10mm; line-height: 1.5; background-color: #ffffff;">
+        <div style="border-bottom: 2px solid #64748b; padding-bottom: 8px; margin-bottom: 24px;">
+          <h1 style="margin: 0; font-size: 22px; color: #1e3a8a; font-weight: 700;">Daily Accounts Ledger</h1>
+          <p style="margin: 6px 0 0 0; color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 500; letter-spacing: 0.5px;">
+            ${dateFormatted} SUMMARY (${dayName})
+          </p>
         </div>
-        
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 30px;">
-          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #10b981;">
-            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Total Income</h3>
-            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #10b981;">${fmt(totalIncome)}</p>
-          </div>
-          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #ef4444;">
-            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Total Expenses</h3>
-            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #ef4444;">${fmt(totalExpense)}</p>
-          </div>
-          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; background-color: #f9fafb; text-align: center; border-top: 4px solid #3b82f6;">
-            <h3 style="margin: 0; font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;">Net Balance</h3>
-            <p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 700; color: #3b82f6;">${fmt(netBalance)}</p>
-          </div>
-        </div>
-        
-        <div style="font-size: 18px; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 32px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700;">Incomes Breakdown (Type by Type)</div>
     `;
 
-    if (Object.keys(incGroups).length === 0) {
-      html += `<p style="font-size: 13px; color: #6b7280;">No income records found for this period.</p>`;
-    } else {
-      Object.entries(incGroups).forEach(([type, items]) => {
-        const subTotal = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-        html += `
-          <div style="font-size: 13px; font-weight: 700; color: #1e40af; background: #eff6ff; padding: 6px 12px; margin-top: 18px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between;">
-            <span>Income Type: ${type}</span>
-            <span>Total: ${fmt(subTotal)}</span>
+    Object.entries(expGroups).forEach(([catName, items]) => {
+      const catTotal = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+      
+      html += `
+        <div style="border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 16px; page-break-inside: avoid; background-color: #ffffff;">
+          <div style="padding: 10px 16px; border-bottom: 1px solid #f1f5f9;">
+            <h3 style="margin: 0; font-size: 14px; color: #1e3a8a; font-weight: 700;">${catName} A/c</h3>
           </div>
-          <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px;">
-            <thead>
-              <tr>
-                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 15%;">Date</th>
-                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 60%;">Remarks</th>
-                <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; background-color: #f9fafb; font-weight: 600; color: #374151; width: 25%;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-        items.forEach(item => {
-          html += `
-            <tr>
-              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.date}</td>
-              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.remarks || '-'}</td>
-              <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; font-weight: 600; color: #10b981;">${fmt(item.amount)}</td>
-            </tr>
-          `;
-        });
+          <div style="padding: 4px 16px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tbody>
+      `;
+      
+      items.forEach((item, index) => {
+        const amt = Number(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+        const remark = item.remarks || item.subcategory_name || '-';
         html += `
-            </tbody>
-          </table>
+                <tr>
+                  <td style="padding: 8px 4px; width: 30px; color: #475569; text-align: center;">${index + 1}</td>
+                  <td style="padding: 8px 12px; color: #334155;">${remark}</td>
+                  <td style="padding: 8px 4px; text-align: right; color: #334155;">${amt}</td>
+                </tr>
         `;
       });
-    }
 
-    html += `<div style="font-size: 18px; color: #1e3a8a; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; margin-top: 40px; margin-bottom: 16px; text-transform: uppercase; font-weight: 700;">Expenses Breakdown (Category & Subcategory)</div>`;
-
-    if (Object.keys(expGroups).length === 0) {
-      html += `<p style="font-size: 13px; color: #6b7280;">No expense records found for this period.</p>`;
-    } else {
-      Object.entries(expGroups).forEach(([category, subs]) => {
-        const catTotal = Object.values(subs).flat().reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-        html += `
-          <div style="font-size: 13px; font-weight: 700; background: #f8fafc; color: #334155; border-left: 4px solid #64748b; padding: 6px 12px; margin-top: 18px; margin-bottom: 8px; border-radius: 4px; display: flex; justify-content: space-between;">
-            <span>Category: ${category}</span>
-            <span>Total: ${fmt(catTotal)}</span>
-          </div>
-        `;
-        
-        Object.entries(subs).forEach(([sub, items]) => {
-          const subTotal = items.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
-          html += `
-            <div style="font-size: 12px; font-weight: 700; color: #b45309; background: #fffbeb; padding: 4px 10px; margin-top: 10px; margin-bottom: 6px; border-radius: 4px; display: flex; justify-content: space-between;">
-              <span>Subcategory: ${sub}</span>
-              <span>Total: ${fmt(subTotal)}</span>
-            </div>
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 12px;">
-              <thead>
-                <tr>
-                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 15%;">Date</th>
-                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left; background-color: #f9fafb; font-weight: 600; color: #374151; width: 60%;">Remarks</th>
-                  <th style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; background-color: #f9fafb; font-weight: 600; color: #374151; width: 25%;">Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-          `;
-          items.forEach(item => {
-            html += `
-              <tr>
-                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.date}</td>
-                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: left;">${item.remarks || '-'}</td>
-                <td style="border: 1px solid #e5e7eb; padding: 8px 10px; text-align: right; font-weight: 600; color: #ef4444;">${fmt(item.amount)}</td>
-              </tr>
-            `;
-          });
-          html += `
+      const totalFmt = Number(catTotal).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+      
+      html += `
               </tbody>
             </table>
-          `;
-        });
-      });
-    }
+          </div>
+          <div style="padding: 8px 16px 12px; border-top: 1px dashed #e2e8f0;">
+            <div style="display: flex; justify-content: space-between; font-weight: 700; font-size: 13px; color: #0f172a; padding: 0 4px;">
+              <span style="margin-left: auto; margin-right: 32px;">Total:</span>
+              <span>${totalFmt}</span>
+            </div>
+            <div style="border-bottom: 2px solid #cbd5e1; margin-top: 6px;"></div>
+          </div>
+        </div>
+      `;
+    });
+
+    const incomeRowsHTML = incomes.map((inc, i) => {
+      const amt = Number(inc.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+      return `
+      <tr>
+        <td style="padding: 10px 0; color: #334155;">${i + 1}. ${inc.income_type_name || 'Income'} ${inc.remarks ? '('+inc.remarks+')' : ''}</td>
+        <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #16a34a;">${amt}</td>
+      </tr>
+      `;
+    }).join('');
+
+    const totExpFmt = Number(totalExpense).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const totIncFmt = Number(totalIncome).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    const balFmt = Number(netBalance).toLocaleString('en-IN', { minimumFractionDigits: 2 });
 
     html += `
-        <div style="margin-top: 60px; display: flex; justify-content: flex-end; page-break-inside: avoid;">
-          <div style="width: 240px; text-align: center; border-top: 1px solid #9ca3af; padding-top: 8px; color: #374151; font-size: 12px; font-weight: 600;">
-            <div style="height: 50px;"></div>
-            Authorised Signatory
-            <div style="font-size: 10px; color: #6b7280; font-weight: normal; margin-top: 4px;">Generated on: ${new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+        <div style="border: 1px solid #e2e8f0; border-radius: 4px; margin-top: 24px; page-break-inside: avoid; background-color: #f8fafc;">
+          <div style="padding: 12px 16px; border-bottom: 1px solid #f1f5f9;">
+            <h3 style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 700;">Balance Sheet Statement</h3>
+          </div>
+          <div style="padding: 8px 16px 16px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tbody>
+                ${incomeRowsHTML || `
+                <tr>
+                  <td style="padding: 10px 0; color: #334155;">1. Total Income</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #16a34a;">${totIncFmt}</td>
+                </tr>
+                `}
+                <tr>
+                  <td style="padding: 10px 0; color: #334155;">${incomes.length ? incomes.length + 1 : 2}. Total Expenses Amount (As detailed above)</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #dc2626;">-${totExpFmt}</td>
+                </tr>
+                <tr><td colspan="2"><div style="border-top: 1px solid #e2e8f0; margin: 4px 0;"></div></td></tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #0f172a; font-weight: 700;">Balance Brought Forward (B/f)</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 700; color: #334155;">${balFmt}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 10px 0; color: #475569;">Add: ${prevDateFormatted} Balance Brought Forward (B/f)</td>
+                  <td style="padding: 10px 0; text-align: right; color: #475569;">0.00</td>
+                </tr>
+                <tr><td colspan="2"><div style="border-top: 2px solid #94a3b8; margin: 4px 0;"></div></td></tr>
+                <tr>
+                  <td style="padding: 12px 0; color: #0f172a; font-weight: 700; font-size: 15px;">Net Balance Carry Forward (Net B/f)</td>
+                  <td style="padding: 12px 0; text-align: right; font-weight: 700; font-size: 15px; color: #0f172a;">${balFmt}</td>
+                </tr>
+                <tr><td colspan="2"><div style="border-top: 1px solid #cbd5e1; margin: 0 0 8px;"></div></td></tr>
+              </tbody>
+            </table>
+            <p style="margin: 12px 0 0 0; font-size: 12px; color: #64748b; font-style: italic;">
+              Note from ledger: System generated report.
+            </p>
           </div>
         </div>
       </div>
     `;
-    
+
     return html;
   };
 
