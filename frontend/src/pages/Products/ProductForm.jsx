@@ -44,7 +44,17 @@ export default function ProductForm({ initial, categories, onSuccess }) {
   const mutation = useMutation({
     mutationFn: (data) => initial ? updateProduct(initial.id, data) : createProduct(data),
     onSuccess: () => { toast.success(initial ? 'Product updated' : 'Product created'); onSuccess(); },
-    onError: (e) => toast.error(e.response?.data?.detail || 'Failed to save'),
+    onError: (e) => {
+      const data = e.response?.data;
+      let msg = 'Failed to save';
+      if (data) {
+        if (data.detail) msg = data.detail;
+        else if (data.name) msg = data.name[0];
+        else if (data.sku) msg = data.sku[0];
+        else if (typeof data === 'object') msg = Object.values(data)[0]?.[0] || msg;
+      }
+      toast.error(msg);
+    },
   });
 
   const handleSubmit = (e) => {
