@@ -185,6 +185,7 @@ class UserViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(request.user)
         data = serializer.data
         data['permissions'] = get_user_permissions(request.user)
+        data['allowed_portals'] = request.user.allowed_portals or []
         # Include company details
         if request.user.company:
             data['company'] = {

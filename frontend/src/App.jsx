@@ -67,6 +67,20 @@ function SuperAdminRoute({ children }) {
   return children;
 }
 
+function PortalRoute({ portal, children }) {
+  const { isAuthenticated, user } = useAuthStore();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  // Superadmins can access everything
+  if (user?.is_superuser) return children;
+  const portals = user?.allowed_portals || [];
+  // If the user has access to this portal, allow
+  if (portals.includes(portal)) return children;
+  // Redirect to the first allowed portal, or fallback
+  if (portal === 'accounts' && portals.includes('billing')) return <Navigate to="/" replace />;
+  if (portal === 'billing' && portals.includes('accounts')) return <Navigate to="/accounts" replace />;
+  return <Navigate to="/" replace />;
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -83,8 +97,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
 
-          {/* Main App Routes */}
-          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+          {/* Main App Routes (Billing Portal) */}
+          <Route path="/" element={<PortalRoute portal="billing"><Layout /></PortalRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="products" element={<ProductList />} />
             <Route path="categories" element={<CategoryList />} />
@@ -114,7 +128,7 @@ export default function App() {
           </Route>
           
           {/* Accounts Portal Routes */}
-          <Route path="/accounts" element={<ProtectedRoute><AccountsLayout /></ProtectedRoute>}>
+          <Route path="/accounts" element={<PortalRoute portal="accounts"><AccountsLayout /></PortalRoute>}>
             <Route index element={<AccountsDashboard />} />
             <Route path="incomes" element={<Incomes />} />
             <Route path="expenses" element={<Expenses />} />

@@ -1,7 +1,10 @@
+from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 
 class IncomeType(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -9,6 +12,8 @@ class IncomeType(models.Model):
         return self.name
 
 class Income(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     income_type = models.ForeignKey(IncomeType, on_delete=models.PROTECT, related_name='incomes')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     date = models.DateField()
@@ -21,6 +26,8 @@ class Income(models.Model):
         return f"{self.income_type.name} - {self.amount}"
 
 class ExpenseCategory(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -28,6 +35,8 @@ class ExpenseCategory(models.Model):
         return self.name
 
 class ExpenseSubcategory(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     category = models.ForeignKey(ExpenseCategory, on_delete=models.CASCADE, related_name='subcategories')
     name = models.CharField(max_length=100)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -36,6 +45,8 @@ class ExpenseSubcategory(models.Model):
         return f"{self.category.name} - {self.name}"
 
 class Expense(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     subcategory = models.ForeignKey(ExpenseSubcategory, on_delete=models.PROTECT, related_name='expenses')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     date = models.DateField()

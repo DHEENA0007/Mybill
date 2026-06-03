@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +13,7 @@ from .serializers import (
 )
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
+class CustomerViewSet(TenantViewSet):
     queryset = Customer.objects.all().order_by('name')
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated]
@@ -46,7 +47,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class SalesInvoiceViewSet(viewsets.ModelViewSet):
+class SalesInvoiceViewSet(TenantViewSet):
     queryset = SalesInvoice.objects.select_related('customer', 'created_by').prefetch_related('items__product').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
@@ -138,7 +139,7 @@ class SalesInvoiceViewSet(viewsets.ModelViewSet):
         return Response({'message': f'Invoice {invoice.invoice_number} cancelled.'})
 
 
-class CreditLogViewSet(viewsets.ModelViewSet):
+class CreditLogViewSet(TenantViewSet):
     queryset = CreditLog.objects.select_related('customer', 'invoice').all()
     serializer_class = CreditLogSerializer
     permission_classes = [IsAuthenticated]
@@ -153,7 +154,7 @@ class CreditLogViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class InvoiceTemplateViewSet(viewsets.ModelViewSet):
+class InvoiceTemplateViewSet(TenantViewSet):
     queryset = InvoiceTemplate.objects.all()
     serializer_class = InvoiceTemplateSerializer
     permission_classes = [IsAuthenticated]

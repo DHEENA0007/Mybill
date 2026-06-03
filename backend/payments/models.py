@@ -1,9 +1,12 @@
+from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 
 
 class Payment(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     PAYMENT_TYPE_CHOICES = [
         ('incoming', 'Incoming'),
         ('outgoing', 'Outgoing'),

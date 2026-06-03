@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -13,14 +14,14 @@ from .serializers import (
 )
 
 
-class IncomeTypeViewSet(viewsets.ModelViewSet):
+class IncomeTypeViewSet(TenantViewSet):
     queryset = IncomeType.objects.all().order_by('name')
     serializer_class = IncomeTypeSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None  # No pagination for dropdown lists
 
 
-class IncomeViewSet(viewsets.ModelViewSet):
+class IncomeViewSet(TenantViewSet):
     serializer_class = IncomeSerializer
     permission_classes = [IsAuthenticated]
 
@@ -45,14 +46,14 @@ class IncomeViewSet(viewsets.ModelViewSet):
         serializer.save(created_by=self.request.user)
 
 
-class ExpenseCategoryViewSet(viewsets.ModelViewSet):
+class ExpenseCategoryViewSet(TenantViewSet):
     queryset = ExpenseCategory.objects.all().prefetch_related('subcategories').order_by('name')
     serializer_class = ExpenseCategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
 
-class ExpenseSubcategoryViewSet(viewsets.ModelViewSet):
+class ExpenseSubcategoryViewSet(TenantViewSet):
     serializer_class = ExpenseSubcategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
@@ -65,7 +66,7 @@ class ExpenseSubcategoryViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class ExpenseViewSet(viewsets.ModelViewSet):
+class ExpenseViewSet(TenantViewSet):
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated]
 

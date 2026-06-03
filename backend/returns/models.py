@@ -1,3 +1,4 @@
+from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -5,6 +6,8 @@ from inventory.models import Product
 
 
 class Return(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     RETURN_TYPE_CHOICES = [
         ('sales', 'Sales Return'),
         ('purchase', 'Purchase Return'),

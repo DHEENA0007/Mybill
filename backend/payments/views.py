@@ -1,4 +1,5 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, filters
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Sum
 from rest_framework.decorators import action
@@ -8,7 +9,7 @@ from .models import Payment
 from .serializers import PaymentSerializer
 
 
-class PaymentViewSet(viewsets.ModelViewSet):
+class PaymentViewSet(TenantViewSet):
     queryset = Payment.objects.select_related('recorded_by').all()
     serializer_class = PaymentSerializer
     permission_classes = [IsAuthenticated]

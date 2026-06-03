@@ -66,6 +66,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['is_superuser'] = user.is_superuser
         token['roles'] = list(user.user_roles.values_list('role__name', flat=True))
         token['permissions'] = get_user_permissions(user)
+        token['allowed_portals'] = user.allowed_portals or []
         if user.company_id:
             token['company_id'] = user.company_id
         return token
@@ -93,6 +94,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             'is_superuser': user.is_superuser,
             'roles': list(user.user_roles.values_list('role__name', flat=True)),
             'permissions': perms,
+            'allowed_portals': user.allowed_portals or [],
             'company': company_data,
         }
         return data
@@ -152,7 +154,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'is_active', 'is_staff', 'is_superuser',
-            'company', 'company_name',
+            'company', 'company_name', 'allowed_portals',
             'roles', 'password', 'created_at', 'updated_at', 'last_login'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login']
@@ -190,7 +192,7 @@ class CompanyAdminSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'is_active', 'is_staff', 'is_superuser',
-            'company', 'company_name', 'password',
+            'company', 'company_name', 'allowed_portals', 'password',
             'created_at', 'updated_at', 'last_login'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login', 'is_superuser']

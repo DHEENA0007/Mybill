@@ -1,4 +1,5 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, filters
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from inventory.models import StockTransaction
@@ -6,7 +7,7 @@ from .models import Return
 from .serializers import ReturnSerializer
 
 
-class ReturnViewSet(viewsets.ModelViewSet):
+class ReturnViewSet(TenantViewSet):
     queryset = Return.objects.select_related('product', 'processed_by').all()
     serializer_class = ReturnSerializer
     permission_classes = [IsAuthenticated]

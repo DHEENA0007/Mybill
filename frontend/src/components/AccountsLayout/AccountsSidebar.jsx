@@ -96,17 +96,19 @@ export default function AccountsSidebar({ onCloseMobile }) {
         ))}
       </nav>
 
-      {/* Switch Portal Button */}
-      <div className="px-3 pb-3">
-        <button
-          onClick={switchToMain}
-          className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-indigo-900 text-indigo-200 hover:text-white hover:bg-indigo-800 border border-indigo-800 ${collapsed ? 'justify-center' : ''}`}
-          title={collapsed ? 'Switch to Main App' : undefined}
-        >
-          <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Main Portal</span>}
-        </button>
-      </div>
+      {/* Switch Portal Button - only show if user has billing access */}
+      {(user?.is_superuser || (user?.allowed_portals || []).includes('billing')) && (
+        <div className="px-3 pb-3">
+          <button
+            onClick={switchToMain}
+            className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-indigo-900 text-indigo-200 hover:text-white hover:bg-indigo-800 border border-indigo-800 ${collapsed ? 'justify-center' : ''}`}
+            title={collapsed ? 'Switch to Main App' : undefined}
+          >
+            <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Main Portal</span>}
+          </button>
+        </div>
+      )}
 
       {/* User */}
       <div className="border-t border-indigo-900 p-3">

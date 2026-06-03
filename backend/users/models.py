@@ -44,6 +44,11 @@ class User(AbstractUser):
         related_name='users',
         help_text='Company this user belongs to. NULL for superadmins.'
     )
+    allowed_portals = models.JSONField(
+        default=list,
+        blank=True,
+        help_text='List of portal keys this admin can access. e.g. ["billing","accounts"]'
+    )
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

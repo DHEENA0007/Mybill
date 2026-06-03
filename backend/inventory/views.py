@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,7 +13,7 @@ from .serializers import (
 )
 
 
-class CategoryViewSet(viewsets.ModelViewSet):
+class CategoryViewSet(TenantViewSet):
     queryset = Category.objects.all().order_by('name')
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated]
@@ -21,7 +22,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     ordering_fields = ['name', 'created_at']
 
 
-class ProductViewSet(viewsets.ModelViewSet):
+class ProductViewSet(TenantViewSet):
     queryset = Product.objects.select_related('category').all()
     serializer_class = ProductSerializer
     permission_classes = [IsAuthenticated]
@@ -92,7 +93,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class StockTransactionViewSet(viewsets.ReadOnlyModelViewSet):
+class StockTransactionViewSet(ReadOnlyTenantViewSet):
     queryset = StockTransaction.objects.select_related('product', 'created_by').all()
     serializer_class = StockTransactionSerializer
     permission_classes = [IsAuthenticated]

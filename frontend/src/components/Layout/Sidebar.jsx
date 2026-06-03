@@ -179,14 +179,17 @@ export default function Sidebar({ onCloseMobile }) {
             {!collapsed && <span>Super Admin</span>}
           </button>
         )}
-        <button
-          onClick={() => navigate('/accounts')}
-          className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 ${collapsed ? 'justify-center' : ''}`}
-          title={collapsed ? 'Accounts Portal' : undefined}
-        >
-          <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Accounts Portal</span>}
-        </button>
+        {/* Accounts Portal - only if user has accounts portal access or is superadmin */}
+        {(isSuperAdmin || (user?.allowed_portals || []).includes('accounts')) && (
+          <button
+            onClick={() => navigate('/accounts')}
+            className={`flex items-center gap-3 w-full p-2 rounded-lg text-sm font-medium transition-colors bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700 ${collapsed ? 'justify-center' : ''}`}
+            title={collapsed ? 'Accounts Portal' : undefined}
+          >
+            <ArrowLeftRight className="w-4 h-4 flex-shrink-0" />
+            {!collapsed && <span>Accounts Portal</span>}
+          </button>
+        )}
       </div>
 
       {/* User */}

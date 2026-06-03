@@ -1,9 +1,12 @@
+from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 from inventory.models import Product
 
 
 class Supplier(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     name = models.CharField(max_length=300)
     phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -22,6 +25,8 @@ class Supplier(models.Model):
 
 
 class Purchase(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     STATUS_CHOICES = [
         ('paid', 'Paid'),
         ('partial', 'Partial'),

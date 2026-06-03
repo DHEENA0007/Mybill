@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status, filters
+from rest_framework import viewsets
+from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +12,7 @@ from .serializers import (
 )
 
 
-class SupplierViewSet(viewsets.ModelViewSet):
+class SupplierViewSet(TenantViewSet):
     queryset = Supplier.objects.all().order_by('name')
     serializer_class = SupplierSerializer
     permission_classes = [IsAuthenticated]
@@ -38,7 +39,7 @@ class SupplierViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PurchaseViewSet(viewsets.ModelViewSet):
+class PurchaseViewSet(TenantViewSet):
     queryset = Purchase.objects.select_related('supplier', 'created_by').prefetch_related('items__product').all()
     permission_classes = [IsAuthenticated]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]

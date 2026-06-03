@@ -1,3 +1,4 @@
+from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -45,6 +46,8 @@ def generate_invoice_number(is_tax_invoice=False):
 
 
 class Customer(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     name = models.CharField(max_length=300)
     phone = models.CharField(max_length=20, blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
@@ -63,13 +66,15 @@ class Customer(models.Model):
 
 
 class SalesInvoice(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     STATUS_CHOICES = [
         ('paid', 'Paid'),
         ('partial', 'Partial'),
         ('pending', 'Pending'),
         ('cancelled', 'Cancelled'),
     ]
-    invoice_number = models.CharField(max_length=30, unique=True, editable=False)
+    invoice_number = models.CharField(max_length=30, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices', null=True, blank=True)
     invoice_date = models.DateField(default=timezone.now)
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
@@ -91,6 +96,7 @@ class SalesInvoice(models.Model):
     class Meta:
         db_table = 'sales_invoices'
         ordering = ['-invoice_date', '-created_at']
+        unique_together = ('company', 'invoice_number')
 
     def __str__(self):
         return f"{self.invoice_number} | {self.customer} | {self.total_amount}"
@@ -133,6 +139,8 @@ class InvoiceItem(models.Model):
 
 
 class InvoiceTemplate(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     TEMPLATE_TYPE_CHOICES = [
         ('tax', 'Tax Invoice'),
         ('nontax', 'Non-Tax Invoice'),
@@ -162,6 +170,8 @@ class InvoiceTemplate(models.Model):
 
 
 class CreditLog(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='credit_logs')
     invoice = models.ForeignKey(SalesInvoice, on_delete=models.SET_NULL, null=True, blank=True, related_name='credit_logs')
     credit_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
