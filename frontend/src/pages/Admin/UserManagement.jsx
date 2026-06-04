@@ -26,7 +26,19 @@ export default function UserManagement() {
   const saveMut = useMutation({
     mutationFn: (d) => editItem ? updateUser(editItem.id, d) : createUser(d),
     onSuccess: () => { toast.success(editItem ? 'Updated' : 'User created'); qc.invalidateQueries(['users']); setFormOpen(false); },
-    onError: (e) => toast.error(e.response?.data?.detail || 'Failed'),
+    onError: (e) => {
+      const data = e.response?.data;
+      let msg = 'Failed';
+      if (data) {
+        if (data.detail) msg = data.detail;
+        else if (data.username) msg = data.username[0];
+        else if (data.email) msg = data.email[0];
+        else if (data.password) msg = data.password[0];
+        else if (data.role_id) msg = data.role_id[0];
+        else if (typeof data === 'object') msg = Object.values(data)[0]?.[0] || msg;
+      }
+      toast.error(msg);
+    },
   });
 
   const columns = [
@@ -73,6 +85,8 @@ export default function UserManagement() {
           e.preventDefault(); 
           const dataToSubmit = { ...form };
           if (!dataToSubmit.role_id) delete dataToSubmit.role_id;
+          else dataToSubmit.role_id = parseInt(dataToSubmit.role_id, 10);
+          if (!dataToSubmit.password) delete dataToSubmit.password;
           saveMut.mutate(dataToSubmit); 
         }} className="space-y-4">
           <Input label="Username" value={form.username} onChange={(e) => setForm(f => ({ ...f, username: e.target.value }))} required />
