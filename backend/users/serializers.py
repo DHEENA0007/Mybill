@@ -148,6 +148,7 @@ class UserSerializer(serializers.ModelSerializer):
     roles = serializers.SerializerMethodField()
     password = serializers.CharField(write_only=True, required=False)
     company_name = serializers.CharField(source='company.name', read_only=True, default=None)
+    role_id = serializers.IntegerField(write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = User
@@ -155,7 +156,7 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'is_active', 'is_staff', 'is_superuser',
             'company', 'company_name', 'allowed_portals',
-            'roles', 'password', 'created_at', 'updated_at', 'last_login'
+            'roles', 'role_id', 'password', 'created_at', 'updated_at', 'last_login'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'last_login']
 
@@ -164,21 +165,40 @@ class UserSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         password = validated_data.pop('password', None)
+        role_id = validated_data.pop('role_id', None)
         user = User(**validated_data)
         if password:
             user.set_password(password)
         else:
             user.set_unusable_password()
         user.save()
+        
+        if role_id:
+            try:
+                role = Role.objects.get(id=role_id)
+                UserRole.objects.create(user=user, role=role)
+            except Role.DoesNotExist:
+                pass
+                
         return user
 
     def update(self, instance, validated_data):
         password = validated_data.pop('password', None)
+        role_id = validated_data.pop('role_id', None)
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         if password:
             instance.set_password(password)
         instance.save()
+        
+        if role_id:
+            try:
+                role = Role.objects.get(id=role_id)
+                UserRole.objects.filter(user=instance).delete()
+                UserRole.objects.create(user=instance, role=role)
+            except Role.DoesNotExist:
+                pass
+                
         return instance
 
 

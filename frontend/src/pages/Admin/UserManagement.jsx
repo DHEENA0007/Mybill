@@ -15,11 +15,8 @@ import usePermission from '../../hooks/usePermission';
 
 export default function UserManagement() {
   const [formOpen, setFormOpen] = useState(false);
-  const [roleOpen, setRoleOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [selectedRole, setSelectedRole] = useState('');
-  const [form, setForm] = useState({ username: '', email: '', password: '', is_active: true });
+  const [form, setForm] = useState({ username: '', email: '', password: '', is_active: true, role_id: '' });
   const qc = useQueryClient();
   const { can } = usePermission();
 
@@ -30,11 +27,6 @@ export default function UserManagement() {
     mutationFn: (d) => editItem ? updateUser(editItem.id, d) : createUser(d),
     onSuccess: () => { toast.success(editItem ? 'Updated' : 'User created'); qc.invalidateQueries(['users']); setFormOpen(false); },
     onError: (e) => toast.error(e.response?.data?.detail || 'Failed'),
-  });
-
-  const assignMut = useMutation({
-    mutationFn: ({ userId, data }) => assignRole(userId, data),
-    onSuccess: () => { toast.success('Role assigned'); qc.invalidateQueries(['users']); setRoleOpen(false); },
   });
 
   const columns = [
@@ -50,8 +42,18 @@ export default function UserManagement() {
     { key: 'date_joined', label: 'Joined', render: (v) => formatDate(v) },
     { key: 'actions', label: '', render: (_, row) => (
       <div className="flex gap-1">
-        {can('users.manage') && <button onClick={() => { setEditItem(row); setForm({ username: row.username, email: row.email, password: '', is_active: row.is_active }); setFormOpen(true); }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>}
-        {can('users.manage_roles') && <button onClick={() => { setSelectedUser(row); setSelectedRole(''); setRoleOpen(true); }} className="p-1.5 text-xs text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors font-medium">Role</button>}
+        {can('users.manage') && <button onClick={() => { 
+          // Find the role_id from the user's role list (if any). Since roles is a list of strings, 
+          // we need to find the matching role object from rolesData to get its ID.
+          let currentRoleId = '';
+          if (row.roles && row.roles.length > 0 && rolesData) {
+             const r = (rolesData?.results || rolesData || []).find(role => role.name === row.roles[0]);
+             if (r) currentRoleId = r.id;
+          }
+          setEditItem(row); 
+          setForm({ username: row.username, email: row.email, password: '', is_active: row.is_active, role_id: currentRoleId }); 
+          setFormOpen(true); 
+        }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>}
       </div>
     )},
   ];
@@ -60,7 +62,7 @@ export default function UserManagement() {
     <div className="space-y-4">
       <div className="flex justify-end">
         {can('users.manage') && (
-          <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setForm({ username: '', email: '', password: '', is_active: true }); setFormOpen(true); }}>Add User</Button>
+          <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setForm({ username: '', email: '', password: '', is_active: true, role_id: '' }); setFormOpen(true); }}>Add User</Button>
         )}
       </div>
       <Card padding={false}>
@@ -74,21 +76,12 @@ export default function UserManagement() {
           <Select label="Status" value={form.is_active} onChange={(e) => setForm(f => ({ ...f, is_active: e.target.value === 'true' }))}>
             <option value="true">Active</option><option value="false">Inactive</option>
           </Select>
-          <div className="flex justify-end"><Button type="submit" loading={saveMut.isPending}>Save User</Button></div>
-        </form>
-      </Modal>
-      <Modal open={roleOpen} onClose={() => setRoleOpen(false)} title={`Assign Role: ${selectedUser?.username}`} size="sm">
-        <div className="space-y-4">
-          <Select label="Role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)}>
-            <option value="">Select role</option>
+          <Select label="Role (Optional)" value={form.role_id} onChange={(e) => setForm(f => ({ ...f, role_id: e.target.value }))}>
+            <option value="">No Role</option>
             {(rolesData?.results || rolesData || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </Select>
-          <div className="flex justify-end">
-            <Button onClick={() => assignMut.mutate({ userId: selectedUser?.id, data: { role: selectedRole } })} loading={assignMut.isPending} disabled={!selectedRole}>
-              Assign Role
-            </Button>
-          </div>
-        </div>
+          <div className="flex justify-end"><Button type="submit" loading={saveMut.isPending}>Save User</Button></div>
+        </form>
       </Modal>
     </div>
   );

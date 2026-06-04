@@ -22,11 +22,12 @@ class IncomeTypeViewSet(TenantViewSet):
 
 
 class IncomeViewSet(TenantViewSet):
+    queryset = Income.objects.all().select_related('income_type').order_by('-date', '-id')
     serializer_class = IncomeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = Income.objects.all().select_related('income_type').order_by('-date', '-id')
+        qs = super().get_queryset()
         # Filters
         income_type = self.request.query_params.get('income_type')
         date_from = self.request.query_params.get('date_from')
@@ -43,7 +44,11 @@ class IncomeViewSet(TenantViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        super().perform_create(serializer)
+        # Also set created_by on the instance
+        instance = serializer.instance
+        instance.created_by = self.request.user
+        instance.save(update_fields=['created_by'])
 
 
 class ExpenseCategoryViewSet(TenantViewSet):
@@ -54,12 +59,13 @@ class ExpenseCategoryViewSet(TenantViewSet):
 
 
 class ExpenseSubcategoryViewSet(TenantViewSet):
+    queryset = ExpenseSubcategory.objects.all().select_related('category').order_by('name')
     serializer_class = ExpenseSubcategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
 
     def get_queryset(self):
-        qs = ExpenseSubcategory.objects.all().select_related('category').order_by('name')
+        qs = super().get_queryset()
         category = self.request.query_params.get('category')
         if category:
             qs = qs.filter(category_id=category)
@@ -67,11 +73,12 @@ class ExpenseSubcategoryViewSet(TenantViewSet):
 
 
 class ExpenseViewSet(TenantViewSet):
+    queryset = Expense.objects.all().select_related('subcategory__category').order_by('-date', '-id')
     serializer_class = ExpenseSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = Expense.objects.all().select_related('subcategory__category').order_by('-date', '-id')
+        qs = super().get_queryset()
         category = self.request.query_params.get('category')
         subcategory = self.request.query_params.get('subcategory')
         date_from = self.request.query_params.get('date_from')
@@ -90,12 +97,23 @@ class ExpenseViewSet(TenantViewSet):
         return qs
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        super().perform_create(serializer)
+        instance = serializer.instance
+        instance.created_by = self.request.user
+        instance.save(update_fields=['created_by'])
 
 
 class AccountsDashboardViewSet(viewsets.ViewSet):
     """Dashboard summary for the accounts portal."""
     permission_classes = [IsAuthenticated]
+
+    def _get_company_qs(self, model):
+        """Return a queryset filtered by the current user's company."""
+        user = self.request.user
+        qs = model.objects.all()
+        if not getattr(user, 'is_superuser', False) and getattr(user, 'company_id', None):
+            qs = qs.filter(company=user.company)
+        return qs
 
     def list(self, request):
         today = timezone.now().date()
@@ -103,39 +121,42 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
         last_month_start = (first_of_month - timedelta(days=1)).replace(day=1)
         last_month_end = first_of_month - timedelta(days=1)
 
+        incomes_qs = self._get_company_qs(Income)
+        expenses_qs = self._get_company_qs(Expense)
+
         # Current month totals
-        income_total = Income.objects.filter(
+        income_total = incomes_qs.filter(
             date__gte=first_of_month, date__lte=today
         ).aggregate(total=Sum('amount'))['total'] or 0
 
-        expense_total = Expense.objects.filter(
+        expense_total = expenses_qs.filter(
             date__gte=first_of_month, date__lte=today
         ).aggregate(total=Sum('amount'))['total'] or 0
 
         # Last month totals for trend
-        prev_income = Income.objects.filter(
+        prev_income = incomes_qs.filter(
             date__gte=last_month_start, date__lte=last_month_end
         ).aggregate(total=Sum('amount'))['total'] or 0
 
-        prev_expense = Expense.objects.filter(
+        prev_expense = expenses_qs.filter(
             date__gte=last_month_start, date__lte=last_month_end
         ).aggregate(total=Sum('amount'))['total'] or 0
 
         # All-time totals
-        all_income = Income.objects.aggregate(total=Sum('amount'))['total'] or 0
-        all_expense = Expense.objects.aggregate(total=Sum('amount'))['total'] or 0
+        all_income = incomes_qs.aggregate(total=Sum('amount'))['total'] or 0
+        all_expense = expenses_qs.aggregate(total=Sum('amount'))['total'] or 0
 
         # Monthly breakdown (last 6 months)
         six_months_ago = today - timedelta(days=180)
         monthly_income = list(
-            Income.objects.filter(date__gte=six_months_ago)
+            incomes_qs.filter(date__gte=six_months_ago)
             .annotate(month=TruncMonth('date'))
             .values('month')
             .annotate(total=Sum('amount'))
             .order_by('month')
         )
         monthly_expense = list(
-            Expense.objects.filter(date__gte=six_months_ago)
+            expenses_qs.filter(date__gte=six_months_ago)
             .annotate(month=TruncMonth('date'))
             .values('month')
             .annotate(total=Sum('amount'))
@@ -144,7 +165,7 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
 
         # Expense by category
         expense_by_category = list(
-            Expense.objects.filter(date__gte=first_of_month, date__lte=today)
+            expenses_qs.filter(date__gte=first_of_month, date__lte=today)
             .values('subcategory__category__name')
             .annotate(total=Sum('amount'))
             .order_by('-total')
@@ -152,7 +173,7 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
 
         # Income by type
         income_by_type = list(
-            Income.objects.filter(date__gte=first_of_month, date__lte=today)
+            incomes_qs.filter(date__gte=first_of_month, date__lte=today)
             .values('income_type__name')
             .annotate(total=Sum('amount'))
             .order_by('-total')
@@ -160,10 +181,10 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
 
         # Recent transactions
         recent_incomes = IncomeSerializer(
-            Income.objects.select_related('income_type').order_by('-date', '-id')[:5], many=True
+            incomes_qs.select_related('income_type').order_by('-date', '-id')[:5], many=True
         ).data
         recent_expenses = ExpenseSerializer(
-            Expense.objects.select_related('subcategory__category').order_by('-date', '-id')[:5], many=True
+            expenses_qs.select_related('subcategory__category').order_by('-date', '-id')[:5], many=True
         ).data
 
         def calc_trend(current, previous):
