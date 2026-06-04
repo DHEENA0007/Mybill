@@ -69,7 +69,12 @@ export default function UserManagement() {
         <Table columns={columns} data={usersData?.results || usersData || []} loading={isLoading} emptyMessage="No users found" />
       </Card>
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title={editItem ? 'Edit User' : 'Add User'} size="md">
-        <form onSubmit={(e) => { e.preventDefault(); saveMut.mutate(form); }} className="space-y-4">
+        <form onSubmit={(e) => { 
+          e.preventDefault(); 
+          const dataToSubmit = { ...form };
+          if (!dataToSubmit.role_id) delete dataToSubmit.role_id;
+          saveMut.mutate(dataToSubmit); 
+        }} className="space-y-4">
           <Input label="Username" value={form.username} onChange={(e) => setForm(f => ({ ...f, username: e.target.value }))} required />
           <Input label="Email" type="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} />
           <Input label={editItem ? 'New Password (leave blank to keep)' : 'Password'} type="password" value={form.password} onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))} required={!editItem} />
