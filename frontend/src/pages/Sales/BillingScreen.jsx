@@ -101,7 +101,22 @@ export default function BillingScreen() {
       qc.invalidateQueries(['invoices']);
       navigate(`/invoices/${res.data.id}`);
     } catch (e) {
-      toast.error(e.response?.data?.detail || 'Failed to create invoice');
+      let errMsg = 'Failed to create invoice';
+      const errData = e.response?.data;
+      if (errData) {
+        if (errData.detail) {
+          errMsg = errData.detail;
+        } else if (errData.items && Array.isArray(errData.items)) {
+          const itemErr = errData.items.find(i => i && Object.keys(i).length > 0);
+          if (itemErr?.non_field_errors) errMsg = itemErr.non_field_errors[0];
+          else if (itemErr?.product) errMsg = `Product error: ${itemErr.product[0]}`;
+          else errMsg = 'Invalid item data';
+        } else if (typeof errData === 'object') {
+          const firstKey = Object.keys(errData)[0];
+          if (Array.isArray(errData[firstKey])) errMsg = errData[firstKey][0];
+        }
+      }
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -241,14 +256,12 @@ export default function BillingScreen() {
               ))}
               <option value="credit">Credit (Pay Later)</option>
             </select>
-            {paymentMethod !== 'credit' && (
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
-                <input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
-                  placeholder={formatCurrency(total).replace('₹','')}
-                  className="w-full pl-7 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-              </div>
-            )}
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+              <input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
+                placeholder={paymentMethod === 'credit' ? 'Initial Payment (Optional)' : formatCurrency(total).replace('₹','')}
+                className="w-full pl-7 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
             {paidAmount && parseFloat(paidAmount) < total && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
                 Balance: {formatCurrency(balance)} will be added to credit
