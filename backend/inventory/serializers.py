@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Category, Product, StockTransaction, ProductPrefix
+from .models import Category, Product, StockTransaction, ProductPrefix, ExpenseCategory, ExpenseSubcategory, Expense
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -87,5 +87,32 @@ class StockAdjustmentSerializer(serializers.Serializer):
 class ProductPrefixSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductPrefix
-        fields = ['id', 'prefix', 'start_number', 'padding', 'current_number', 'created_at']
+        fields = ['id', 'prefix', 'start_number', 'padding', 'current_number']
+
+class ExpenseSubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExpenseSubcategory
+        fields = ['id', 'name', 'category']
+
+class ExpenseCategorySerializer(serializers.ModelSerializer):
+    subcategories = ExpenseSubcategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ExpenseCategory
+        fields = ['id', 'name', 'subcategories']
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='subcategory.category.name', read_only=True)
+    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+
+    class Meta:
+        model = Expense
+        fields = ['id', 'subcategory', 'category_name', 'subcategory_name', 
+                  'amount', 'date', 'remarks', 'created_by_name', 'created_at']
         read_only_fields = ['id', 'created_at']
+
+class ExpenseCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Expense
+        fields = ['subcategory', 'amount', 'date', 'remarks']

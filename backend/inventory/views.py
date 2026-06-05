@@ -6,11 +6,15 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 from django.db.models import Q, Sum, F
 
-from .models import Category, Product, StockTransaction, ProductPrefix
+from .models import (
+    Category, Product, StockTransaction, ProductPrefix, 
+    ExpenseCategory, ExpenseSubcategory, Expense
+)
 from .serializers import (
     CategorySerializer, ProductSerializer, ProductListSerializer,
     StockTransactionSerializer, StockAdjustmentSerializer,
-    ProductPrefixSerializer
+    ProductPrefixSerializer, ExpenseCategorySerializer, 
+    ExpenseSubcategorySerializer, ExpenseSerializer, ExpenseCreateSerializer
 )
 
 
@@ -144,10 +148,15 @@ class StockTransactionViewSet(ReadOnlyTenantViewSet):
             queryset = queryset.filter(transaction_type=transaction_type)
         return queryset
 
-class ProductPrefixViewSet(TenantViewSet):
-    queryset = ProductPrefix.objects.all().order_by('-created_at')
-    serializer_class = ProductPrefixSerializer
+class ProductPrefixViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
+    serializer_class = ProductPrefixSerializer
+
+    def get_queryset(self):
+        return ProductPrefix.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
 
     @action(detail=True, methods=['get'])
     def next_sku(self, request, pk=None):
@@ -155,3 +164,60 @@ class ProductPrefixViewSet(TenantViewSet):
         next_num = max(prefix.start_number, prefix.current_number + 1)
         sku = f"{prefix.prefix}{str(next_num).zfill(prefix.padding)}"
         return Response({'sku': sku})
+
+class ExpenseCategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExpenseCategorySerializer
+
+    def get_queryset(self):
+        return ExpenseCategory.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class ExpenseSubcategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = ExpenseSubcategorySerializer
+    filterset_fields = ['category']
+
+    def get_queryset(self):
+        return ExpenseSubcategory.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['subcategory', 'date']
+    search_fields = ['remarks']
+    ordering_fields = ['date', 'amount', 'created_at']
+    ordering = ['-date', '-created_at']
+
+    def get_queryset(self):
+        qs = Expense.objects.filter(company=self.request.user.company).select_related('subcategory__category', 'created_by')
+        
+        # Date range filtering
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+            
+        # Category filtering
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(subcategory__category_id=category)
+            
+        return qs
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ExpenseCreateSerializer
+        return ExpenseSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(
+            company=self.request.user.company,
+            created_by=self.request.user
+        )

@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, FileText, RotateCcw,
   CreditCard, BarChart2, Shield, Users, ChevronLeft, ChevronRight,
   Tag, Truck, LogOut, Boxes, Layout, CalendarDays, ArrowLeftRight,
-  Building2
+  Building2, FolderTree
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import usePermission from '../../hooks/usePermission';
@@ -28,11 +28,13 @@ const navGroups = [
     ],
   },
   {
-    label: 'Purchases',
+    label: 'Purchases & Expenses',
     perm: ['purchases.view', 'purchases.create', 'purchases.manage_suppliers'],
     items: [
       { to: '/suppliers', icon: Truck, label: 'Suppliers', perm: ['purchases.view', 'purchases.manage_suppliers'] },
       { to: '/purchases', icon: ShoppingCart, label: 'Purchases', perm: ['purchases.view', 'purchases.create'] },
+      { to: '/expenses', icon: CreditCard, label: 'Expenses' },
+      { to: '/expense-categories', icon: FolderTree, label: 'Expense Categories' },
     ],
   },
   {

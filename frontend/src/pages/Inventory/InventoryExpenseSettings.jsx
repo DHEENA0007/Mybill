@@ -3,10 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Tag, FolderTree, ChevronDown, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import {
-  getIncomeTypes, createIncomeType, updateIncomeType, deleteIncomeType,
   getExpenseCategories, createExpenseCategory, updateExpenseCategory, deleteExpenseCategory,
   createExpenseSubcategory, updateExpenseSubcategory, deleteExpenseSubcategory,
-} from '../../api/accounts';
+} from '../../api/inventoryExpenses';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
@@ -14,9 +13,10 @@ import Select from '../../components/UI/Select';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
-export default function Settings({ defaultTab = 'income', hideIncome = false }) {
+export default function InventoryExpenseSettings() {
   const qc = useQueryClient();
-  const [tab, setTab] = useState(hideIncome ? 'expense' : defaultTab);
+  const [tab, setTab] = useState('expense');
+  const hideIncome = true;
 
   // --------------- Income Types ---------------
   const [itModal, setItModal] = useState(false);
@@ -64,7 +64,7 @@ export default function Settings({ defaultTab = 'income', hideIncome = false }) 
   const [subDelete, setSubDelete] = useState(null);
 
   const { data: expenseCategories, isLoading: ecLoading } = useQuery({
-    queryKey: ['expense-categories'],
+    queryKey: ['inventory-expense-categories'],
     queryFn: () => getExpenseCategories().then(r => {
       const d = r.data;
       return Array.isArray(d) ? d : (d?.results || []);
@@ -77,14 +77,14 @@ export default function Settings({ defaultTab = 'income', hideIncome = false }) 
       : createExpenseCategory({ name: ecName }),
     onSuccess: () => {
       toast.success(ecEditing ? 'Category updated' : 'Category created');
-      qc.invalidateQueries({ queryKey: ['expense-categories'] });
+      qc.invalidateQueries({ queryKey: ['inventory-expense-categories'] });
       setEcModal(false); setEcEditing(null); setEcName('');
     },
   });
 
   const ecDel = useMutation({
     mutationFn: (id) => deleteExpenseCategory(id),
-    onSuccess: () => { toast.success('Category deleted'); qc.invalidateQueries({ queryKey: ['expense-categories'] }); setEcDelete(null); },
+    onSuccess: () => { toast.success('Category deleted'); qc.invalidateQueries({ queryKey: ['inventory-expense-categories'] }); setEcDelete(null); },
     onError: () => toast.error('Cannot delete — category has subcategories or expenses'),
   });
 
@@ -94,14 +94,14 @@ export default function Settings({ defaultTab = 'income', hideIncome = false }) 
       : createExpenseSubcategory({ name: subName, category: subCategoryId }),
     onSuccess: () => {
       toast.success(subEditing ? 'Subcategory updated' : 'Subcategory created');
-      qc.invalidateQueries({ queryKey: ['expense-categories'] });
+      qc.invalidateQueries({ queryKey: ['inventory-expense-categories'] });
       setSubModal(false); setSubEditing(null); setSubName('');
     },
   });
 
   const subDel = useMutation({
     mutationFn: (id) => deleteExpenseSubcategory(id),
-    onSuccess: () => { toast.success('Subcategory deleted'); qc.invalidateQueries({ queryKey: ['expense-categories'] }); setSubDelete(null); },
+    onSuccess: () => { toast.success('Subcategory deleted'); qc.invalidateQueries({ queryKey: ['inventory-expense-categories'] }); setSubDelete(null); },
     onError: () => toast.error('Cannot delete — subcategory is in use'),
   });
 
