@@ -28,7 +28,27 @@ class ProductSerializer(serializers.ModelSerializer):
             'tax_percentage', 'is_active',
             'is_low_stock', 'profit_margin', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'current_stock']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def update(self, instance, validated_data):
+        from .models import StockTransaction
+        old_stock = instance.current_stock
+        new_stock = validated_data.get('current_stock', old_stock)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        if old_stock != new_stock:
+            diff = new_stock - old_stock
+            StockTransaction.objects.create(
+                product=instance,
+                transaction_type='adjustment',
+                quantity=diff,
+                reference_id='Manual Edit',
+                notes='Stock updated manually via product edit'
+            )
+        return instance
 
 
 class ProductListSerializer(serializers.ModelSerializer):

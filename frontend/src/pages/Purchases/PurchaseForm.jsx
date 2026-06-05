@@ -18,13 +18,13 @@ export default function PurchaseForm() {
   const today = new Date().toISOString().split('T')[0];
 
   const [form, setForm] = useState({ supplier: '', purchase_date: today, notes: '', paid_amount: '' });
-  const [items, setItems] = useState([{ product: '', quantity: 1, purchase_price: '' }]);
+  const [items, setItems] = useState([{ product: '', quantity: 1, purchase_price: '', selling_price: '' }]);
   const [productSearch, setProductSearch] = useState('');
 
   const { data: suppliers } = useQuery({ queryKey: ['suppliers', {}], queryFn: () => getSuppliers({ page_size: 200 }).then(r => r.data) });
   const { data: products } = useQuery({ queryKey: ['products', { search: productSearch }], queryFn: () => getProducts({ search: productSearch, page_size: 200 }).then(r => r.data) });
 
-  const addRow = () => setItems(i => [...i, { product: '', quantity: 1, purchase_price: '' }]);
+  const addRow = () => setItems(i => [...i, { product: '', quantity: 1, purchase_price: '', selling_price: '' }]);
   const removeRow = (idx) => setItems(i => i.filter((_, j) => j !== idx));
   const updateRow = (idx, key, val) => setItems(i => i.map((row, j) => j === idx ? { ...row, [key]: val } : row));
 
@@ -40,7 +40,7 @@ export default function PurchaseForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (items.some(i => !i.product || !i.purchase_price)) { toast.error('Fill all product rows'); return; }
-    mutation.mutate({ ...form, paid_amount: parseFloat(form.paid_amount) || 0, items: items.map(i => ({ ...i, quantity: parseInt(i.quantity), purchase_price: parseFloat(i.purchase_price) })) });
+    mutation.mutate({ ...form, paid_amount: parseFloat(form.paid_amount) || 0, items: items.map(i => ({ ...i, quantity: parseInt(i.quantity), purchase_price: parseFloat(i.purchase_price), selling_price: parseFloat(i.selling_price) || 0 })) });
   };
 
   return (
@@ -63,29 +63,36 @@ export default function PurchaseForm() {
         </div>
         <div className="space-y-2">
           <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-gray-500 uppercase px-1">
-            <span className="col-span-5">Product</span><span className="col-span-2">Qty</span><span className="col-span-3">Price</span><span className="col-span-2">Total</span>
+            <span className="col-span-4">Product</span><span className="col-span-2">Qty</span><span className="col-span-2">Buy Price</span><span className="col-span-2">Sell Price</span><span className="col-span-1 text-right">Total</span><span className="col-span-1" />
           </div>
           {items.map((row, idx) => (
             <div key={idx} className="grid grid-cols-12 gap-2 items-center">
-              <div className="col-span-5">
+              <div className="col-span-4">
                 <select value={row.product} onChange={(e) => {
                   const p = (products?.results || []).find(p => p.id == e.target.value);
                   updateRow(idx, 'product', e.target.value);
-                  if (p) updateRow(idx, 'purchase_price', p.purchase_price);
-                }} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                  if (p) {
+                    updateRow(idx, 'purchase_price', p.purchase_price);
+                    updateRow(idx, 'selling_price', p.selling_price);
+                  }
+                }} className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
                   <option value="">Select product</option>
                   {(products?.results || []).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="col-span-2">
                 <input type="number" min="1" value={row.quantity} onChange={(e) => updateRow(idx, 'quantity', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                  className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
-              <div className="col-span-3">
+              <div className="col-span-2">
                 <input type="number" step="0.01" value={row.purchase_price} onChange={(e) => updateRow(idx, 'purchase_price', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0.00" />
+                  className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buy" />
               </div>
-              <div className="col-span-1 text-sm font-medium text-gray-700">{formatCurrency(row.quantity * (row.purchase_price || 0))}</div>
+              <div className="col-span-2">
+                <input type="number" step="0.01" value={row.selling_price} onChange={(e) => updateRow(idx, 'selling_price', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Sell" />
+              </div>
+              <div className="col-span-1 text-sm font-medium text-gray-700 text-right">{formatCurrency(row.quantity * (row.purchase_price || 0))}</div>
               <button type="button" onClick={() => removeRow(idx)} className="col-span-1 p-1.5 text-gray-400 hover:text-red-500 transition-colors flex justify-center">
                 <Trash2 className="w-4 h-4" />
               </button>

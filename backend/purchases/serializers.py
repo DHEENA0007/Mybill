@@ -36,9 +36,11 @@ class PurchaseItemSerializer(serializers.ModelSerializer):
 
 
 class PurchaseItemCreateSerializer(serializers.ModelSerializer):
+    selling_price = serializers.DecimalField(max_digits=12, decimal_places=2, required=False, write_only=True)
+
     class Meta:
         model = PurchaseItem
-        fields = ['product', 'quantity', 'purchase_price']
+        fields = ['product', 'quantity', 'purchase_price', 'selling_price']
 
 
 class PurchaseSerializer(serializers.ModelSerializer):
@@ -86,6 +88,8 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
                 product = item_data['product']
                 product.current_stock += item_data['quantity']
                 product.purchase_price = item_data['purchase_price']
+                if 'selling_price' in item_data and item_data['selling_price']:
+                    product.selling_price = item_data['selling_price']
                 product.save()
 
                 # Create stock transaction
@@ -134,6 +138,9 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
 
                     product = item_data['product']
                     product.current_stock += item_data['quantity']
+                    product.purchase_price = item_data['purchase_price']
+                    if 'selling_price' in item_data and item_data['selling_price']:
+                        product.selling_price = item_data['selling_price']
                     product.save()
 
                     StockTransaction.objects.create(
