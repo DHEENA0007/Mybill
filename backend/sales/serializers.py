@@ -120,6 +120,12 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
             invoice.total_amount = subtotal + total_tax - float(discount)
             paid = float(validated_data.get('paid_amount', 0))
             invoice.balance_due = invoice.total_amount - paid
+            
+            if invoice.balance_due > 0 and not invoice.customer:
+                raise serializers.ValidationError(
+                    {"customer": "A customer must be selected for credit or partial payments."}
+                )
+
             if invoice.balance_due <= 0:
                 invoice.status = 'paid'
                 invoice.balance_due = 0

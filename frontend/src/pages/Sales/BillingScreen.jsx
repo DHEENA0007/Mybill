@@ -24,6 +24,8 @@ export default function BillingScreen() {
   const [cart, setCart] = useState([]);
   const [customer, setCustomer] = useState('');
   const [isTaxInvoice, setIsTaxInvoice] = useState(false);
+  const [taxRate, setTaxRate] = useState('');
+  const [discountAmount, setDiscountAmount] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [paidAmount, setPaidAmount] = useState('');
   const [notes, setNotes] = useState('');
@@ -70,18 +72,20 @@ export default function BillingScreen() {
 
   const subtotal = cart.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
   const taxAmount = isTaxInvoice ? cart.reduce((s, i) => s + (i.quantity * i.unit_price * (i.tax_percentage / 100)), 0) : 0;
-  const total = subtotal + taxAmount;
+  const total = Math.max(0, subtotal + taxAmount - (parseFloat(discountAmount) || 0));
   const balance = total - (parseFloat(paidAmount) || 0);
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!cart.length) { toast.error('Add at least one product'); return; }
+    if (balance > 0 && !customer) { toast.error('Please select a customer for credit/partial payments'); return; }
     setSaving(true);
     try {
       const data = {
         customer: customer || null,
-        tax_rate: taxRate,
         paid_amount: parseFloat(paidAmount) || 0,
+        discount_amount: parseFloat(discountAmount) || 0,
+        tax_rate: taxRate ? parseFloat(taxRate) : 0,
         payment_method: paymentMethod,
         notes,
         is_tax_invoice: isTaxInvoice,
@@ -210,10 +214,18 @@ export default function BillingScreen() {
             <div className="flex justify-between text-gray-600"><span>Subtotal</span><span className="font-medium">{formatCurrency(subtotal)}</span></div>
             {isTaxInvoice && (
               <div className="flex justify-between items-center text-gray-600">
-                <span>Tax (Auto-calculated)</span>
-                <span className="font-medium">{formatCurrency(taxAmount)}</span>
+                <span>Tax Rate (Auto)</span>
+                <div className="flex gap-2 items-center">
+                  <input type="text" readOnly value={taxRate || 'Auto %'} className="w-20 bg-gray-50 border border-gray-200 rounded px-2 py-1 text-xs text-center text-gray-500 cursor-not-allowed" />
+                  <span className="font-medium">{formatCurrency(taxAmount)}</span>
+                </div>
               </div>
             )}
+            <div className="flex justify-between items-center text-gray-600">
+               <span>Discount</span>
+               <input type="number" step="0.01" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)}
+                  className="w-24 text-right border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="0.00" />
+            </div>
             <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-100"><span>Total</span><span className="text-indigo-600">{formatCurrency(total)}</span></div>
           </div>
         </Card>
