@@ -1,4 +1,4 @@
-import api from './index';
+import api from './axios';
 
 export const getExpenseCategories = () => api.get('/inventory/expense-categories/');
 export const createExpenseCategory = (data) => api.post('/inventory/expense-categories/', data);
