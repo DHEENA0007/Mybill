@@ -170,6 +170,9 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
             instance.save()
         return instance
 
+    def to_representation(self, instance):
+        return PurchaseSerializer(instance).data
+
 
 class PurchaseListSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)

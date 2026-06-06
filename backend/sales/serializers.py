@@ -153,6 +153,9 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
 
         return invoice
 
+    def to_representation(self, instance):
+        return SalesInvoiceSerializer(instance).data
+
 
 class SalesInvoiceListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
