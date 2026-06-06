@@ -245,7 +245,7 @@ class ApiService {
 
   // ── Accounts: Expense Categories ─────────────────────────────────────
   Future<Response> getExpenseCategories() {
-    return dio.get('/expense-categories/');
+    return dio.get('/accounts-expense-categories/');
   }
 
   Future<Response> createExpenseCategory(Map<String, dynamic> data) {
@@ -253,12 +253,12 @@ class ApiService {
   }
 
   Future<Response> deleteExpenseCategory(int id) {
-    return dio.delete('/expense-categories/$id/');
+    return dio.delete('/accounts-expense-categories/$id/');
   }
 
   // ── Accounts: Expense Subcategories ──────────────────────────────────
   Future<Response> getExpenseSubcategories({String? category}) {
-    return dio.get('/expense-subcategories/', queryParameters: {
+    return dio.get('/accounts-expense-subcategories/', queryParameters: {
       if (category != null) 'category': category,
     });
   }
@@ -268,12 +268,12 @@ class ApiService {
   }
 
   Future<Response> deleteExpenseSubcategory(int id) {
-    return dio.delete('/expense-subcategories/$id/');
+    return dio.delete('/accounts-expense-subcategories/$id/');
   }
 
   // ── Accounts: Expenses ───────────────────────────────────────────────
   Future<Response> getExpenses({int page = 1, String? category, String? subcategory, String? dateFrom, String? dateTo}) {
-    return dio.get('/expenses/', queryParameters: {
+    return dio.get('/accounts-expenses/', queryParameters: {
       'page': page,
       if (category != null) 'category': category,
       if (subcategory != null) 'subcategory': subcategory,
@@ -291,7 +291,7 @@ class ApiService {
   }
 
   Future<Response> deleteExpense(int id) {
-    return dio.delete('/expenses/$id/');
+    return dio.delete('/accounts-expenses/$id/');
   }
 
   // ── Reports ──────────────────────────────────────────────────────────

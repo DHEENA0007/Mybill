@@ -9,9 +9,9 @@ from .views import (
 router = DefaultRouter()
 router.register(r'income-types', IncomeTypeViewSet)
 router.register(r'incomes', IncomeViewSet, basename='incomes')
-router.register(r'expense-categories', ExpenseCategoryViewSet)
-router.register(r'expense-subcategories', ExpenseSubcategoryViewSet, basename='expense-subcategories')
-router.register(r'expenses', ExpenseViewSet, basename='expenses')
+router.register(r'accounts-expense-categories', ExpenseCategoryViewSet, basename='accounts-expense-categories')
+router.register(r'accounts-expense-subcategories', ExpenseSubcategoryViewSet, basename='accounts-expense-subcategories')
+router.register(r'accounts-expenses', ExpenseViewSet, basename='accounts-expenses')
 router.register(r'accounts-dashboard', AccountsDashboardViewSet, basename='accounts-dashboard')
 
 urlpatterns = [
