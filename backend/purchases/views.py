@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from decimal import Decimal
 from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -84,7 +85,7 @@ class PurchaseViewSet(TenantViewSet):
         if not amount:
             return Response({'error': 'Amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
-            amount = float(amount)
+            amount = Decimal(str(amount))
             if amount <= 0:
                 return Response({'error': 'Amount must be positive.'}, status=status.HTTP_400_BAD_REQUEST)
             purchase.paid_amount += amount

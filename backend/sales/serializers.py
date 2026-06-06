@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from decimal import Decimal
 from .models import Customer, SalesInvoice, InvoiceItem, CreditLog, InvoiceTemplate
 
 
@@ -118,8 +119,8 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
 
             invoice.subtotal = subtotal
             invoice.tax_amount = total_tax
-            invoice.total_amount = subtotal + total_tax - float(discount)
-            paid = float(validated_data.get('paid_amount', 0))
+            invoice.total_amount = subtotal + total_tax - Decimal(str(discount or 0))
+            paid = Decimal(str(validated_data.get('paid_amount', 0)))
             invoice.balance_due = invoice.total_amount - paid
             
             if invoice.balance_due > 0 and not invoice.customer:

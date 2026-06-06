@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from decimal import Decimal
 from users.mixins import TenantViewSet, ReadOnlyTenantViewSet, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -93,7 +94,7 @@ class SalesInvoiceViewSet(TenantViewSet):
             return Response({'error': 'Amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             from django.db import transaction as db_transaction
-            amount = float(amount)
+            amount = Decimal(str(amount))
             if amount <= 0:
                 return Response({'error': 'Amount must be positive.'}, status=status.HTTP_400_BAD_REQUEST)
             with db_transaction.atomic():
@@ -108,13 +109,13 @@ class SalesInvoiceViewSet(TenantViewSet):
                     credit_log.save()
 
                 if invoice.customer:
-                    invoice.customer.credit_balance = max(float(invoice.customer.credit_balance) - amount, 0)
+                    invoice.customer.credit_balance = max(invoice.customer.credit_balance - amount, Decimal('0'))
                     invoice.customer.save()
 
             return Response({
                 'message': 'Payment recorded.',
-                'paid_amount': float(invoice.paid_amount),
-                'balance_due': float(invoice.balance_due),
+                'paid_amount': invoice.paid_amount,
+                'balance_due': invoice.balance_due,
                 'status': invoice.status
             })
         except (ValueError, TypeError):
