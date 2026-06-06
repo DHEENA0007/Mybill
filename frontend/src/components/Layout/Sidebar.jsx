@@ -85,7 +85,7 @@ export default function Sidebar({ onCloseMobile }) {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const isVisible = (perms, item) => {

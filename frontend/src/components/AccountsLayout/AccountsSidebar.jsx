@@ -27,7 +27,7 @@ export default function AccountsSidebar({ onCloseMobile }) {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    window.location.href = '/login';
   };
 
   const switchToMain = () => {
