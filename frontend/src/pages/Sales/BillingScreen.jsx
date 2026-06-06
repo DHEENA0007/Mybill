@@ -83,10 +83,9 @@ export default function BillingScreen() {
     try {
       const data = {
         customer: customer || null,
+        invoice_date: new Date().toISOString().split('T')[0],
         paid_amount: parseFloat(paidAmount) || 0,
         discount_amount: parseFloat(discountAmount) || 0,
-        tax_rate: taxRate ? parseFloat(taxRate) : 0,
-        payment_method: paymentMethod,
         notes,
         is_tax_invoice: isTaxInvoice,
         items: cart.map(i => ({ 

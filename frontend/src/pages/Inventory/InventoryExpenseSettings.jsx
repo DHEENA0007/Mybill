@@ -26,16 +26,12 @@ export default function InventoryExpenseSettings() {
 
   const { data: incomeTypes, isLoading: itLoading } = useQuery({
     queryKey: ['income-types'],
-    queryFn: () => getIncomeTypes().then(r => {
-      const d = r.data;
-      return Array.isArray(d) ? d : (d?.results || []);
-    }),
+    queryFn: () => Promise.resolve([]),
+    enabled: !hideIncome,
   });
 
   const itSave = useMutation({
-    mutationFn: () => itEditing
-      ? updateIncomeType(itEditing.id, { name: itName })
-      : createIncomeType({ name: itName }),
+    mutationFn: () => Promise.reject(new Error('Not implemented')),
     onSuccess: () => {
       toast.success(itEditing ? 'Type updated' : 'Type created');
       qc.invalidateQueries({ queryKey: ['income-types'] });
@@ -44,7 +40,7 @@ export default function InventoryExpenseSettings() {
   });
 
   const itDel = useMutation({
-    mutationFn: (id) => deleteIncomeType(id),
+    mutationFn: () => Promise.reject(new Error('Not implemented')),
     onSuccess: () => { toast.success('Type deleted'); qc.invalidateQueries({ queryKey: ['income-types'] }); setItDelete(null); },
     onError: () => toast.error('Cannot delete — type is in use'),
   });

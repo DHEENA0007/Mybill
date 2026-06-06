@@ -71,7 +71,11 @@ class PurchaseViewSet(TenantViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        user = self.request.user
+        kwargs = {'created_by': user}
+        if getattr(user, 'company_id', None) and not getattr(user, 'is_superuser', False):
+            kwargs['company'] = user.company
+        serializer.save(**kwargs)
 
     @action(detail=True, methods=['post'])
     def record_payment(self, request, pk=None):

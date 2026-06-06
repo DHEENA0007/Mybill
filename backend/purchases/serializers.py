@@ -79,6 +79,8 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
             purchase = Purchase.objects.create(**validated_data)
             total = 0
             for item_data in items_data:
+                # Extract selling_price before creating PurchaseItem (not a model field)
+                selling_price = item_data.pop('selling_price', None)
                 item_data['purchase'] = purchase
                 item_data['total_price'] = item_data['quantity'] * item_data['purchase_price']
                 item = PurchaseItem.objects.create(**item_data)
@@ -88,12 +90,13 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
                 product = item_data['product']
                 product.current_stock += item_data['quantity']
                 product.purchase_price = item_data['purchase_price']
-                if 'selling_price' in item_data and item_data['selling_price']:
-                    product.selling_price = item_data['selling_price']
+                if selling_price:
+                    product.selling_price = selling_price
                 product.save()
 
                 # Create stock transaction
                 StockTransaction.objects.create(
+                    company=purchase.company,
                     product=product,
                     transaction_type='purchase',
                     quantity=item_data['quantity'],
@@ -131,6 +134,8 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
 
                 total = 0
                 for item_data in items_data:
+                    # Extract selling_price before creating PurchaseItem (not a model field)
+                    selling_price = item_data.pop('selling_price', None)
                     item_data['purchase'] = instance
                     item_data['total_price'] = item_data['quantity'] * item_data['purchase_price']
                     item = PurchaseItem.objects.create(**item_data)
@@ -139,11 +144,12 @@ class PurchaseCreateSerializer(serializers.ModelSerializer):
                     product = item_data['product']
                     product.current_stock += item_data['quantity']
                     product.purchase_price = item_data['purchase_price']
-                    if 'selling_price' in item_data and item_data['selling_price']:
-                        product.selling_price = item_data['selling_price']
+                    if selling_price:
+                        product.selling_price = selling_price
                     product.save()
 
                     StockTransaction.objects.create(
+                        company=instance.company,
                         product=product,
                         transaction_type='purchase',
                         quantity=item_data['quantity'],

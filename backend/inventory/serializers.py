@@ -95,7 +95,7 @@ class ExpenseSubcategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'category']
 
 class ExpenseCategorySerializer(serializers.ModelSerializer):
-    subcategories = ExpenseSubcategorySerializer(many=True, read_only=True)
+    subcategories = ExpenseSubcategorySerializer(many=True, read_only=True, source='inventory_subcategories')
 
     class Meta:
         model = ExpenseCategory

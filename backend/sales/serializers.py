@@ -108,6 +108,7 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
                 product.save()
 
                 StockTransaction.objects.create(
+                    company=invoice.company,
                     product=product,
                     transaction_type='sale',
                     quantity=-item_data['quantity'],
@@ -138,6 +139,7 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
             # Auto-create CreditLog when customer owes a balance
             if invoice.balance_due > 0 and invoice.customer:
                 CreditLog.objects.create(
+                    company=invoice.company,
                     customer=invoice.customer,
                     invoice=invoice,
                     credit_amount=invoice.balance_due,

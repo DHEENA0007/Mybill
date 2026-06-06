@@ -34,7 +34,26 @@ export default function PurchaseForm() {
   const mutation = useMutation({
     mutationFn: createPurchase,
     onSuccess: () => { toast.success('Purchase created'); qc.invalidateQueries(['purchases']); navigate('/purchases'); },
-    onError: (e) => toast.error(e.response?.data?.detail || 'Failed'),
+    onError: (e) => {
+      let errMsg = 'Failed to create purchase';
+      const errData = e.response?.data;
+      if (errData) {
+        if (errData.detail) {
+          errMsg = errData.detail;
+        } else if (errData.items && Array.isArray(errData.items)) {
+          const itemErr = errData.items.find(i => i && Object.keys(i).length > 0);
+          if (itemErr) {
+            const firstKey = Object.keys(itemErr)[0];
+            errMsg = Array.isArray(itemErr[firstKey]) ? itemErr[firstKey][0] : String(itemErr[firstKey]);
+          }
+        } else if (typeof errData === 'object') {
+          const firstKey = Object.keys(errData)[0];
+          if (Array.isArray(errData[firstKey])) errMsg = `${firstKey}: ${errData[firstKey][0]}`;
+          else if (typeof errData[firstKey] === 'string') errMsg = errData[firstKey];
+        }
+      }
+      toast.error(errMsg);
+    },
   });
 
   const handleSubmit = (e) => {

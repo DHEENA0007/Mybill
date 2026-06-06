@@ -34,8 +34,33 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
-    const msg = error.response?.data?.detail || error.response?.data?.message || 'Something went wrong';
-    if (error.response?.status !== 401) toast.error(msg);
+    if (error.response?.status !== 401) {
+      const errData = error.response?.data;
+      let msg = 'Something went wrong';
+      if (errData) {
+        if (typeof errData === 'string') {
+          msg = errData;
+        } else if (errData.detail) {
+          msg = errData.detail;
+        } else if (errData.message) {
+          msg = errData.message;
+        } else if (typeof errData === 'object') {
+          // Extract first validation error from DRF response
+          const keys = Object.keys(errData);
+          if (keys.length > 0) {
+            const firstVal = errData[keys[0]];
+            if (Array.isArray(firstVal) && firstVal.length > 0) {
+              msg = typeof firstVal[0] === 'string' ? `${keys[0]}: ${firstVal[0]}` : JSON.stringify(firstVal[0]);
+            } else if (typeof firstVal === 'string') {
+              msg = firstVal;
+            }
+          }
+        }
+      } else if (error.message) {
+        msg = error.message;
+      }
+      toast.error(msg);
+    }
     return Promise.reject(error);
   }
 );

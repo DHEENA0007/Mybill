@@ -79,7 +79,11 @@ class SalesInvoiceViewSet(TenantViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        user = self.request.user
+        kwargs = {'created_by': user}
+        if getattr(user, 'company_id', None) and not getattr(user, 'is_superuser', False):
+            kwargs['company'] = user.company
+        serializer.save(**kwargs)
 
     @action(detail=True, methods=['post'])
     def record_payment(self, request, pk=None):
@@ -128,6 +132,7 @@ class SalesInvoiceViewSet(TenantViewSet):
                 item.product.current_stock += item.quantity
                 item.product.save()
                 StockTransaction.objects.create(
+                    company=invoice.company,
                     product=item.product,
                     transaction_type='return',
                     quantity=item.quantity,
