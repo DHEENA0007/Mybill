@@ -8,6 +8,8 @@ import {
   recordCreditPayment, getCustomerCredits,
 } from '../../api/payments';
 import { getCustomersWithCredit } from '../../api/invoices';
+import { getCustomers } from '../../api/customers';
+import { getSuppliers } from '../../api/suppliers';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Table from '../../components/UI/Table';
@@ -71,6 +73,18 @@ export default function Payments() {
     enabled: !!creditForm.customer_id,
   });
 
+  const { data: allCustomers } = useQuery({
+    queryKey: ['customers', { is_active: true }],
+    queryFn: () => getCustomers({ is_active: true }).then(r => r.data),
+    enabled: formOpen && form.reference_type === 'credit',
+  });
+
+  const { data: allSuppliers } = useQuery({
+    queryKey: ['suppliers', { is_active: true }],
+    queryFn: () => getSuppliers({ is_active: true }).then(r => r.data),
+    enabled: formOpen && form.reference_type === 'supplier',
+  });
+
   const createMut = useMutation({
     mutationFn: createPayment,
     onSuccess: () => { toast.success('Payment recorded'); qc.invalidateQueries(['payments']); setFormOpen(false); },
@@ -85,7 +99,9 @@ export default function Payments() {
       qc.invalidateQueries(['suppliers-with-pending']);
       qc.invalidateQueries(['supplier-purchases']);
       setSupplierFormOpen(false);
+      setFormOpen(false); // Also close generic modal if open
       setSupplierForm({ supplier_id: '', purchase_id: '', amount: '', payment_method: 'cash', notes: '' });
+      setForm({ payment_type: '', reference_type: '', reference_id: '', amount: '', payment_method: '', notes: '' });
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed to record supplier payment'),
   });
@@ -99,10 +115,33 @@ export default function Payments() {
       qc.invalidateQueries(['customer-credits']);
       qc.invalidateQueries(['credit-logs']);
       setCreditFormOpen(false);
+      setFormOpen(false); // Also close generic modal if open
       setCreditForm({ customer_id: '', credit_log_id: '', amount: '', payment_method: 'cash', notes: '' });
+      setForm({ payment_type: '', reference_type: '', reference_id: '', amount: '', payment_method: '', notes: '' });
     },
     onError: (err) => toast.error(err.response?.data?.error || 'Failed to collect credit payment'),
   });
+
+  const handleGenericSubmit = (e) => {
+    e.preventDefault();
+    if (form.reference_type === 'supplier') {
+      supplierMut.mutate({
+        supplier_id: form.reference_id,
+        amount: form.amount,
+        payment_method: form.payment_method,
+        notes: form.notes
+      });
+    } else if (form.reference_type === 'credit') {
+      creditMut.mutate({
+        customer_id: form.reference_id,
+        amount: form.amount,
+        payment_method: form.payment_method,
+        notes: form.notes
+      });
+    } else {
+      createMut.mutate(form);
+    }
+  };
 
   const columns = [
     { key: 'id', label: '#', render: (v) => <span className="font-mono">PAY-{String(v).padStart(4,'0')}</span> },
@@ -123,7 +162,7 @@ export default function Payments() {
       const colorMap = { credit: 'text-purple-600', supplier: 'text-orange-600', invoice: 'text-blue-600', purchase: 'text-teal-600' };
       return (
         <span className={`text-xs font-medium ${colorMap[v] || 'text-gray-600'}`}>
-          {refLabel} #{row.reference_id}
+          {row.reference_name ? `${row.reference_name} (${refLabel})` : `${refLabel} #${row.reference_id}`}
         </span>
       );
     }},
@@ -172,7 +211,7 @@ export default function Payments() {
 
       {/* Generic Record Payment Modal */}
       <Modal open={formOpen} onClose={() => setFormOpen(false)} title="Record Payment" size="md">
-        <form onSubmit={(e) => { e.preventDefault(); createMut.mutate(form); }} className="space-y-4">
+        <form onSubmit={handleGenericSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <Select label="Payment Type" value={form.payment_type} onChange={(e) => setForm(f => ({ ...f, payment_type: e.target.value }))} required>
               <option value="">Select type</option>
@@ -180,7 +219,7 @@ export default function Payments() {
                 <option key={value} value={value}>{label}</option>
               ))}
             </Select>
-            <Select label="Reference Type" value={form.reference_type} onChange={(e) => setForm(f => ({ ...f, reference_type: e.target.value }))} required>
+            <Select label="Reference Type" value={form.reference_type} onChange={(e) => setForm(f => ({ ...f, reference_type: e.target.value, reference_id: '' }))} required>
               <option value="">Select reference</option>
               {referenceTypes.map(({ value, label }) => (
                 <option key={value} value={value}>{label}</option>
@@ -188,7 +227,23 @@ export default function Payments() {
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Reference ID" value={form.reference_id} onChange={(e) => setForm(f => ({ ...f, reference_id: e.target.value }))} required />
+            {form.reference_type === 'credit' ? (
+              <Select label="Select Customer" value={form.reference_id} onChange={(e) => setForm(f => ({ ...f, reference_id: e.target.value }))} required>
+                <option value="">Choose customer...</option>
+                {(allCustomers?.results || allCustomers || []).map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </Select>
+            ) : form.reference_type === 'supplier' ? (
+              <Select label="Select Supplier" value={form.reference_id} onChange={(e) => setForm(f => ({ ...f, reference_id: e.target.value }))} required>
+                <option value="">Choose supplier...</option>
+                {(allSuppliers?.results || allSuppliers || []).map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </Select>
+            ) : (
+              <Input label="Reference ID" value={form.reference_id} onChange={(e) => setForm(f => ({ ...f, reference_id: e.target.value }))} required />
+            )}
             <Input label="Amount" type="number" step="0.01" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} required prefix="₹" />
           </div>
           <Select label="Payment Method" value={form.payment_method} onChange={(e) => setForm(f => ({ ...f, payment_method: e.target.value }))} required>
