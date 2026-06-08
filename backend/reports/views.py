@@ -53,7 +53,10 @@ class SalesReportView(APIView):
 
         date_from, date_to = get_date_range(period, start_date, end_date)
 
+        company_id = request.user.company_id
+
         invoices = SalesInvoice.objects.filter(
+            company_id=company_id,
             invoice_date__gte=date_from,
             invoice_date__lte=date_to
         ).exclude(status='cancelled')
@@ -79,6 +82,7 @@ class SalesReportView(APIView):
 
         # Top products by revenue
         top_products_qs = InvoiceItem.objects.filter(
+            invoice__company_id=company_id,
             invoice__invoice_date__gte=date_from,
             invoice__invoice_date__lte=date_to
         ).exclude(invoice__status='cancelled').values(
@@ -130,7 +134,9 @@ class InventoryReportView(APIView):
     def get(self, request):
         from inventory.models import Product, Category, StockTransaction
 
-        products = Product.objects.filter(is_active=True)
+        company_id = request.user.company_id
+
+        products = Product.objects.filter(company_id=company_id, is_active=True)
         total_products = products.count()
         low_stock_count = products.filter(current_stock__lte=F('min_stock_level')).count()
         out_of_stock = products.filter(current_stock=0).count()
@@ -141,7 +147,7 @@ class InventoryReportView(APIView):
             products.aggregate(value=Sum(F('current_stock') * F('selling_price')))['value'] or 0
         )
 
-        by_category = Category.objects.annotate(
+        by_category = Category.objects.filter(company_id=company_id).annotate(
             product_count=Count('products', filter=Q(products__is_active=True)),
             total_stock=Sum('products__current_stock', filter=Q(products__is_active=True)),
             stock_value=Sum(
@@ -156,7 +162,9 @@ class InventoryReportView(APIView):
             'id', 'name', 'sku', 'current_stock', 'min_stock_level', 'category__name'
         ).order_by('current_stock')[:20]
 
-        recent_transactions = StockTransaction.objects.select_related('product').order_by(
+        recent_transactions = StockTransaction.objects.filter(
+            product__company_id=company_id
+        ).select_related('product').order_by(
             '-created_at'
         )[:20].values('product__name', 'transaction_type', 'quantity', 'reference_id', 'created_at')
 
@@ -206,7 +214,10 @@ class FinancialReportView(APIView):
 
         date_from, date_to = get_date_range(period, start_date, end_date)
 
+        company_id = request.user.company_id
+
         invoices = SalesInvoice.objects.filter(
+            company_id=company_id,
             invoice_date__gte=date_from,
             invoice_date__lte=date_to
         ).exclude(status='cancelled')
@@ -216,6 +227,7 @@ class FinancialReportView(APIView):
         receivables = float(invoices.aggregate(t=Sum('balance_due'))['t'] or 0)
 
         purchases = Purchase.objects.filter(
+            company_id=company_id,
             purchase_date__gte=date_from,
             purchase_date__lte=date_to
         )
@@ -225,7 +237,7 @@ class FinancialReportView(APIView):
 
         # Customer credit (total outstanding credit balances)
         customer_credit = float(
-            Customer.objects.aggregate(t=Sum('credit_balance'))['t'] or 0
+            Customer.objects.filter(company_id=company_id).aggregate(t=Sum('credit_balance'))['t'] or 0
         )
 
         # Monthly breakdown (Python-level grouping)
@@ -254,6 +266,7 @@ class FinancialReportView(APIView):
 
         # Supplier pending payments
         supplier_pending = Supplier.objects.filter(
+            company_id=company_id,
             purchases__status__in=['pending', 'partial'],
             purchases__purchase_date__gte=date_from,
             purchases__purchase_date__lte=date_to
@@ -285,30 +298,32 @@ class DashboardStatsView(APIView):
         from purchases.models import Purchase, Supplier
         from inventory.models import Product
 
+        company_id = request.user.company_id
         today = date.today()
         month_start = today.replace(day=1)
 
-        today_invoices = SalesInvoice.objects.filter(invoice_date=today).exclude(status='cancelled')
+        today_invoices = SalesInvoice.objects.filter(company_id=company_id, invoice_date=today).exclude(status='cancelled')
         today_sales = float(today_invoices.aggregate(t=Sum('total_amount'))['t'] or 0)
         today_invoice_count = today_invoices.count()
 
         month_invoices = SalesInvoice.objects.filter(
+            company_id=company_id,
             invoice_date__gte=month_start
         ).exclude(status='cancelled')
         month_sales = float(month_invoices.aggregate(t=Sum('total_amount'))['t'] or 0)
 
         month_purchases = float(
-            Purchase.objects.filter(purchase_date__gte=month_start).aggregate(t=Sum('total_amount'))['t'] or 0
+            Purchase.objects.filter(company_id=company_id, purchase_date__gte=month_start).aggregate(t=Sum('total_amount'))['t'] or 0
         )
 
         total_receivables = float(
-            SalesInvoice.objects.filter(status__in=['pending', 'partial']).aggregate(t=Sum('balance_due'))['t'] or 0
+            SalesInvoice.objects.filter(company_id=company_id, status__in=['pending', 'partial']).aggregate(t=Sum('balance_due'))['t'] or 0
         )
         total_payables = float(
-            Purchase.objects.filter(status__in=['pending', 'partial']).aggregate(t=Sum('balance_due'))['t'] or 0
+            Purchase.objects.filter(company_id=company_id, status__in=['pending', 'partial']).aggregate(t=Sum('balance_due'))['t'] or 0
         )
 
-        products = Product.objects.filter(is_active=True)
+        products = Product.objects.filter(company_id=company_id, is_active=True)
         total_products = products.count()
         low_stock = products.filter(current_stock__lte=F('min_stock_level')).count()
         out_of_stock = products.filter(current_stock=0).count()
@@ -316,19 +331,20 @@ class DashboardStatsView(APIView):
             products.aggregate(value=Sum(F('current_stock') * F('purchase_price')))['value'] or 0
         )
 
-        total_customers = Customer.objects.filter(is_active=True).count()
-        total_suppliers = Supplier.objects.filter(is_active=True).count()
+        total_customers = Customer.objects.filter(company_id=company_id, is_active=True).count()
+        total_suppliers = Supplier.objects.filter(company_id=company_id, is_active=True).count()
 
         # Last 7 days sales
         last_7_days = []
         for i in range(6, -1, -1):
             day = today - timedelta(days=i)
             day_total = float(
-                SalesInvoice.objects.filter(invoice_date=day).exclude(status='cancelled').aggregate(t=Sum('total_amount'))['t'] or 0
+                SalesInvoice.objects.filter(company_id=company_id, invoice_date=day).exclude(status='cancelled').aggregate(t=Sum('total_amount'))['t'] or 0
             )
             last_7_days.append({'date': str(day), 'total': day_total})
 
         top_products = InvoiceItem.objects.filter(
+            invoice__company_id=company_id,
             invoice__invoice_date__gte=month_start
         ).exclude(invoice__status='cancelled').values(
             'product__name', 'product__sku'
@@ -338,6 +354,7 @@ class DashboardStatsView(APIView):
         ).order_by('-revenue')[:5]
 
         pending_invoices = SalesInvoice.objects.filter(
+            company_id=company_id,
             status__in=['pending', 'partial']
         ).order_by('-invoice_date')[:5].values(
             'invoice_number', 'customer__name', 'total_amount', 'balance_due', 'invoice_date'
