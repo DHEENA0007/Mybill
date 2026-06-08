@@ -51,7 +51,7 @@ export default function Payments() {
   const { data: suppliersWithPending } = useQuery({
     queryKey: ['suppliers-with-pending'],
     queryFn: () => getSuppliersWithPending().then(r => r.data),
-    enabled: supplierFormOpen,
+    enabled: supplierFormOpen || (formOpen && form.reference_type === 'supplier'),
   });
 
   const { data: supplierPurchases } = useQuery({
@@ -64,7 +64,7 @@ export default function Payments() {
   const { data: customersWithCredit } = useQuery({
     queryKey: ['customers-with-credit'],
     queryFn: () => getCustomersWithCredit().then(r => r.data),
-    enabled: creditFormOpen,
+    enabled: creditFormOpen || (formOpen && form.reference_type === 'credit'),
   });
 
   const { data: customerCreditLogs } = useQuery({
@@ -173,6 +173,14 @@ export default function Payments() {
   const selectedPurchase = supplierPurchases?.find(p => String(p.id) === String(supplierForm.purchase_id));
   const selectedCreditLog = customerCreditLogs?.find(c => String(c.id) === String(creditForm.credit_log_id));
 
+  const generalSelectedCustomer = form.reference_type === 'credit' && form.reference_id
+    ? (allCustomers?.results || allCustomers || []).find(c => String(c.id) === String(form.reference_id))
+    : null;
+
+  const generalSelectedSupplier = form.reference_type === 'supplier' && form.reference_id
+    ? suppliersWithPending?.find(s => String(s.id) === String(form.reference_id))
+    : null;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
@@ -245,6 +253,65 @@ export default function Payments() {
               <Input label="Reference ID" value={form.reference_id} onChange={(e) => setForm(f => ({ ...f, reference_id: e.target.value }))} required />
             )}
             <Input label="Amount" type="number" step="0.01" value={form.amount} onChange={(e) => setForm(f => ({ ...f, amount: e.target.value }))} required prefix="₹" />
+            
+            {form.reference_type === 'credit' && generalSelectedCustomer && (
+              <div className="col-span-2 bg-purple-50 border border-purple-100 rounded-lg p-3 space-y-2">
+                <div className="text-sm flex justify-between items-center">
+                  <span className="text-purple-800">Outstanding Credit Balance:</span>
+                  <span className="text-red-600 font-bold">{formatCurrency(generalSelectedCustomer.credit_balance)}</span>
+                </div>
+                {parseFloat(generalSelectedCustomer.credit_balance) > 0 && (
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <span className="text-xs text-purple-700 py-1">Quick Fill:</span>
+                    {[
+                      { label: 'Full', val: generalSelectedCustomer.credit_balance },
+                      { label: '50%', val: (parseFloat(generalSelectedCustomer.credit_balance) / 2).toFixed(2) },
+                    ].map(q => (
+                      <button
+                        key={q.label}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, amount: q.val }))}
+                        className="px-2 py-0.5 text-xs rounded-full bg-white border border-purple-200 text-purple-700 hover:bg-purple-100 transition"
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {form.reference_type === 'supplier' && generalSelectedSupplier && (
+              <div className="col-span-2 bg-orange-50 border border-orange-100 rounded-lg p-3 space-y-2">
+                <div className="text-sm flex justify-between items-center">
+                  <span className="text-orange-800">Total Pending Purchases:</span>
+                  <span className="text-red-600 font-bold">{formatCurrency(generalSelectedSupplier.total_pending)}</span>
+                </div>
+                {parseFloat(generalSelectedSupplier.total_pending) > 0 && (
+                  <div className="flex gap-2 flex-wrap items-center">
+                    <span className="text-xs text-orange-700 py-1">Quick Fill:</span>
+                    {[
+                      { label: 'Full', val: generalSelectedSupplier.total_pending },
+                      { label: '50%', val: (parseFloat(generalSelectedSupplier.total_pending) / 2).toFixed(2) },
+                    ].map(q => (
+                      <button
+                        key={q.label}
+                        type="button"
+                        onClick={() => setForm(f => ({ ...f, amount: q.val }))}
+                        className="px-2 py-0.5 text-xs rounded-full bg-white border border-orange-200 text-orange-700 hover:bg-orange-100 transition"
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {form.reference_type === 'supplier' && form.reference_id && !generalSelectedSupplier && (
+              <div className="col-span-2 bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-sm flex justify-between items-center">
+                <span className="text-emerald-800">Total Pending Purchases:</span>
+                <span className="text-emerald-600 font-bold">₹0.00 (No pending balance)</span>
+              </div>
+            )}
           </div>
           <Select label="Payment Method" value={form.payment_method} onChange={(e) => setForm(f => ({ ...f, payment_method: e.target.value }))} required>
             <option value="">Select method</option>
