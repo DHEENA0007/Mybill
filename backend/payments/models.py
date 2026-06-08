@@ -14,6 +14,8 @@ class Payment(models.Model):
     REFERENCE_TYPE_CHOICES = [
         ('invoice', 'Invoice'),
         ('purchase', 'Purchase'),
+        ('credit', 'Credit Settlement'),
+        ('supplier', 'Supplier Payment'),
         ('other', 'Other'),
     ]
     PAYMENT_METHOD_CHOICES = [

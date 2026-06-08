@@ -155,9 +155,79 @@ class CreditLogViewSet(TenantViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         customer = self.request.query_params.get('customer')
+        has_balance = self.request.query_params.get('has_balance')
         if customer:
             queryset = queryset.filter(customer_id=customer)
+        if has_balance and has_balance.lower() == 'true':
+            queryset = queryset.filter(remaining_balance__gt=0)
         return queryset
+
+    @action(detail=True, methods=['post'])
+    def settle(self, request, pk=None):
+        """Record a payment against a credit log entry."""
+        from django.db import transaction as db_transaction
+        credit_log = self.get_object()
+        amount = request.data.get('amount')
+        payment_method = request.data.get('payment_method', 'cash')
+        notes = request.data.get('notes', '')
+
+        if not amount:
+            return Response({'error': 'Amount is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            amount = Decimal(str(amount))
+            if amount <= 0:
+                return Response({'error': 'Amount must be positive.'}, status=status.HTTP_400_BAD_REQUEST)
+            if amount > credit_log.remaining_balance:
+                return Response({'error': f'Amount exceeds remaining balance of {credit_log.remaining_balance}.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            with db_transaction.atomic():
+                # Update credit log
+                credit_log.paid_amount += amount
+                credit_log.remaining_balance = max(credit_log.credit_amount - credit_log.paid_amount, Decimal('0'))
+                credit_log.save()
+
+                # Update invoice
+                if credit_log.invoice:
+                    credit_log.invoice.paid_amount += amount
+                    credit_log.invoice.update_balance()
+
+                # Update customer credit balance
+                if credit_log.customer:
+                    credit_log.customer.credit_balance = max(credit_log.customer.credit_balance - amount, Decimal('0'))
+                    credit_log.customer.save()
+
+                # Create a Payment record
+                from payments.models import Payment
+                Payment.objects.create(
+                    company=credit_log.company,
+                    payment_type='incoming',
+                    reference_type='credit',
+                    reference_id=str(credit_log.id),
+                    amount=amount,
+                    payment_method=payment_method,
+                    notes=notes or f'Credit settlement for {credit_log.customer.name} - Invoice {credit_log.invoice.invoice_number if credit_log.invoice else "N/A"}',
+                    recorded_by=request.user,
+                )
+
+            serializer = self.get_serializer(credit_log)
+            return Response({
+                'message': 'Credit settled successfully.',
+                'credit_log': serializer.data,
+            })
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def customers_with_credit(self, request):
+        """Get list of customers who have outstanding credit balance."""
+        credit_logs = self.get_queryset().filter(remaining_balance__gt=0)
+        customer_ids = credit_logs.values_list('customer_id', flat=True).distinct()
+        customers = Customer.objects.filter(id__in=customer_ids).order_by('name')
+        data = [
+            {'id': c.id, 'name': c.name, 'phone': c.phone, 'credit_balance': float(c.credit_balance)}
+            for c in customers
+        ]
+        return Response(data)
 
 
 class InvoiceTemplateViewSet(TenantViewSet):

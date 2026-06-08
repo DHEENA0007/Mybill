@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download, Filter, PieChart, BarChart2, List, TrendingUp, TrendingDown, Printer } from 'lucide-react';
+import { Download, Filter, PieChart, BarChart2, List, TrendingUp, TrendingDown, Printer, Search, X, ChevronDown, ChevronUp, Calendar, SlidersHorizontal } from 'lucide-react';
 import { getIncomes, getExpenses, getIncomeTypes, getExpenseCategories } from '../../api/accounts';
 import Button from '../../components/UI/Button';
 import Select from '../../components/UI/Select';
@@ -17,11 +17,130 @@ function getDefaultRange() {
   return { from, to };
 }
 
+function getDatePresetRange(preset) {
+  const now = new Date();
+  const today = now.toISOString().split('T')[0];
+  switch (preset) {
+    case 'today':
+      return { from: today, to: today };
+    case 'yesterday': {
+      const y = new Date(now); y.setDate(y.getDate() - 1);
+      const yd = y.toISOString().split('T')[0];
+      return { from: yd, to: yd };
+    }
+    case 'this_week': {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const mon = new Date(now); mon.setDate(diff);
+      return { from: mon.toISOString().split('T')[0], to: today };
+    }
+    case 'last_week': {
+      const day = now.getDay();
+      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+      const thisMonday = new Date(now); thisMonday.setDate(diff);
+      const lastMonday = new Date(thisMonday); lastMonday.setDate(lastMonday.getDate() - 7);
+      const lastSunday = new Date(thisMonday); lastSunday.setDate(lastSunday.getDate() - 1);
+      return { from: lastMonday.toISOString().split('T')[0], to: lastSunday.toISOString().split('T')[0] };
+    }
+    case 'this_month':
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0], to: today };
+    case 'last_month': {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      return { from: first.toISOString().split('T')[0], to: last.toISOString().split('T')[0] };
+    }
+    case 'this_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      const qStart = new Date(now.getFullYear(), q * 3, 1);
+      return { from: qStart.toISOString().split('T')[0], to: today };
+    }
+    case 'last_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      const qStart = new Date(now.getFullYear(), (q - 1) * 3, 1);
+      const qEnd = new Date(now.getFullYear(), q * 3, 0);
+      return { from: qStart.toISOString().split('T')[0], to: qEnd.toISOString().split('T')[0] };
+    }
+    case 'this_year':
+      return { from: new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0], to: today };
+    case 'last_year': {
+      const y = now.getFullYear() - 1;
+      return { from: new Date(y, 0, 1).toISOString().split('T')[0], to: new Date(y, 11, 31).toISOString().split('T')[0] };
+    }
+    case 'last_7_days': {
+      const d = new Date(now); d.setDate(d.getDate() - 6);
+      return { from: d.toISOString().split('T')[0], to: today };
+    }
+    case 'last_30_days': {
+      const d = new Date(now); d.setDate(d.getDate() - 29);
+      return { from: d.toISOString().split('T')[0], to: today };
+    }
+    case 'last_90_days': {
+      const d = new Date(now); d.setDate(d.getDate() - 89);
+      return { from: d.toISOString().split('T')[0], to: today };
+    }
+    default:
+      return getDefaultRange();
+  }
+}
+
+const DATE_PRESETS = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
+  { value: 'this_week', label: 'This Week' },
+  { value: 'last_week', label: 'Last Week' },
+  { value: 'last_7_days', label: 'Last 7 Days' },
+  { value: 'this_month', label: 'This Month' },
+  { value: 'last_month', label: 'Last Month' },
+  { value: 'last_30_days', label: 'Last 30 Days' },
+  { value: 'this_quarter', label: 'This Quarter' },
+  { value: 'last_quarter', label: 'Last Quarter' },
+  { value: 'last_90_days', label: 'Last 90 Days' },
+  { value: 'this_year', label: 'This Year' },
+  { value: 'last_year', label: 'Last Year' },
+  { value: 'custom', label: 'Custom Range' },
+];
+
 export default function Reports() {
   const defaults = getDefaultRange();
   const [dateFrom, setDateFrom] = useState(defaults.from);
   const [dateTo, setDateTo] = useState(defaults.to);
+  const [datePreset, setDatePreset] = useState('this_month');
   const [view, setView] = useState('summary');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Advanced filters
+  const [txnType, setTxnType] = useState('all'); // all | income | expense
+  const [filterIncomeType, setFilterIncomeType] = useState('');
+  const [filterExpenseCategory, setFilterExpenseCategory] = useState('');
+  const [searchRemarks, setSearchRemarks] = useState('');
+  const [amountMin, setAmountMin] = useState('');
+  const [amountMax, setAmountMax] = useState('');
+
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    if (preset !== 'custom') {
+      const range = getDatePresetRange(preset);
+      setDateFrom(range.from);
+      setDateTo(range.to);
+    }
+  };
+
+  const activeFilterCount = [
+    txnType !== 'all',
+    filterIncomeType !== '',
+    filterExpenseCategory !== '',
+    searchRemarks !== '',
+    amountMin !== '',
+    amountMax !== '',
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setTxnType('all');
+    setFilterIncomeType('');
+    setFilterExpenseCategory('');
+    setSearchRemarks('');
+    setAmountMin('');
+    setAmountMax('');
+  };
 
   const { data: incomeData, isLoading: incLoading } = useQuery({
     queryKey: ['report-incomes', dateFrom, dateTo],
@@ -51,8 +170,39 @@ export default function Reports() {
 
   const loading = incLoading || expLoading;
 
-  const incomes = incomeData?.results || incomeData || [];
-  const expenses = expenseData?.results || expenseData || [];
+  const rawIncomes = incomeData?.results || incomeData || [];
+  const rawExpenses = expenseData?.results || expenseData || [];
+
+  // Apply client-side filters
+  const incomes = useMemo(() => {
+    if (txnType === 'expense') return [];
+    let filtered = rawIncomes;
+    if (filterIncomeType) {
+      filtered = filtered.filter(i => String(i.income_type) === filterIncomeType || String(i.income_type_id) === filterIncomeType);
+    }
+    if (searchRemarks) {
+      const q = searchRemarks.toLowerCase();
+      filtered = filtered.filter(i => (i.remarks || '').toLowerCase().includes(q) || (i.income_type_name || '').toLowerCase().includes(q));
+    }
+    if (amountMin) filtered = filtered.filter(i => parseFloat(i.amount) >= parseFloat(amountMin));
+    if (amountMax) filtered = filtered.filter(i => parseFloat(i.amount) <= parseFloat(amountMax));
+    return filtered;
+  }, [rawIncomes, txnType, filterIncomeType, searchRemarks, amountMin, amountMax]);
+
+  const expenses = useMemo(() => {
+    if (txnType === 'income') return [];
+    let filtered = rawExpenses;
+    if (filterExpenseCategory) {
+      filtered = filtered.filter(e => String(e.category) === filterExpenseCategory || String(e.category_id) === filterExpenseCategory || e.category_name === filterExpenseCategory);
+    }
+    if (searchRemarks) {
+      const q = searchRemarks.toLowerCase();
+      filtered = filtered.filter(e => (e.remarks || '').toLowerCase().includes(q) || (e.category_name || '').toLowerCase().includes(q) || (e.subcategory_name || '').toLowerCase().includes(q));
+    }
+    if (amountMin) filtered = filtered.filter(e => parseFloat(e.amount) >= parseFloat(amountMin));
+    if (amountMax) filtered = filtered.filter(e => parseFloat(e.amount) <= parseFloat(amountMax));
+    return filtered;
+  }, [rawExpenses, txnType, filterExpenseCategory, searchRemarks, amountMin, amountMax]);
 
   const totalIncome = incomes.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
   const totalExpense = expenses.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
@@ -302,20 +452,189 @@ export default function Reports() {
         </div>
       </div>
 
-      {/* Date Range + View Toggle */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-          <Input label="From" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
-          <Input label="To" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 h-fit">
-            <button onClick={() => setView('summary')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'summary' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
-              <BarChart2 className="w-4 h-4" />
-            </button>
-            <button onClick={() => setView('ledger')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'ledger' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
-              <List className="w-4 h-4" />
-            </button>
+      {/* Filters Panel */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Row 1: Date preset + Date range + View toggle */}
+        <div className="p-4 flex flex-col gap-3">
+          {/* Date Preset Pills */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <div className="flex gap-1.5 flex-wrap">
+              {DATE_PRESETS.map(p => (
+                <button
+                  key={p.value}
+                  onClick={() => handlePresetChange(p.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                    datePreset === p.value
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date Inputs + View Toggle row */}
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex gap-2 items-end">
+              <Input label="From" type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setDatePreset('custom'); }} />
+              <Input label="To" type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setDatePreset('custom'); }} />
+            </div>
+            <div className="flex gap-2 items-center ml-auto">
+              {/* Transaction Type Quick Filter */}
+              <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                {[{ v: 'all', l: 'All' }, { v: 'income', l: 'Income' }, { v: 'expense', l: 'Expense' }].map(t => (
+                  <button
+                    key={t.v}
+                    onClick={() => setTxnType(t.v)}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      txnType === t.v
+                        ? (t.v === 'income' ? 'bg-emerald-500 text-white shadow-sm' : t.v === 'expense' ? 'bg-red-500 text-white shadow-sm' : 'bg-white text-gray-900 shadow-sm')
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                  >
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+              {/* View Toggle */}
+              <div className="flex gap-0.5 bg-gray-100 rounded-lg p-0.5">
+                <button onClick={() => setView('summary')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'summary' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
+                  <BarChart2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setView('ledger')} className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${view === 'ledger' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Advanced Filter Toggle */}
+              <button
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all border ${
+                  showAdvanced || activeFilterCount > 0
+                    ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <span className="bg-indigo-600 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center">{activeFilterCount}</span>
+                )}
+                {showAdvanced ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Advanced Filters (Collapsible) */}
+        {showAdvanced && (
+          <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-3">
+            <div className="flex flex-col sm:flex-row gap-3 items-end">
+              {/* Search */}
+              <div className="flex-1 min-w-[180px]">
+                <label className="text-xs font-medium text-gray-500 mb-1 block">Search Remarks</label>
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search by remarks, category..."
+                    value={searchRemarks}
+                    onChange={(e) => setSearchRemarks(e.target.value)}
+                    className="w-full border border-gray-300 rounded-lg pl-8 pr-8 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+                  />
+                  {searchRemarks && (
+                    <button onClick={() => setSearchRemarks('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Income Type filter */}
+              {txnType !== 'expense' && (
+                <div className="min-w-[160px]">
+                  <Select label="Income Type" value={filterIncomeType} onChange={(e) => setFilterIncomeType(e.target.value)}>
+                    <option value="">All Types</option>
+                    {(types || []).map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+
+              {/* Expense Category filter */}
+              {txnType !== 'income' && (
+                <div className="min-w-[160px]">
+                  <Select label="Expense Category" value={filterExpenseCategory} onChange={(e) => setFilterExpenseCategory(e.target.value)}>
+                    <option value="">All Categories</option>
+                    {(categories || []).map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+
+              {/* Amount Range */}
+              <div className="min-w-[120px]">
+                <Input label="Min Amount" type="number" placeholder="0" value={amountMin} onChange={(e) => setAmountMin(e.target.value)} />
+              </div>
+              <div className="min-w-[120px]">
+                <Input label="Max Amount" type="number" placeholder="∞" value={amountMax} onChange={(e) => setAmountMax(e.target.value)} />
+              </div>
+
+              {/* Clear All */}
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={clearAllFilters}
+                  className="flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700 px-3 py-2 rounded-lg hover:bg-red-50 transition whitespace-nowrap"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear All ({activeFilterCount})
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Active Filter Tags */}
+        {activeFilterCount > 0 && !showAdvanced && (
+          <div className="border-t border-gray-100 px-4 py-2 flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-400">Active:</span>
+            {txnType !== 'all' && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                {txnType === 'income' ? 'Income Only' : 'Expenses Only'}
+                <button onClick={() => setTxnType('all')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filterIncomeType && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
+                Type: {(types || []).find(t => String(t.id) === filterIncomeType)?.name || filterIncomeType}
+                <button onClick={() => setFilterIncomeType('')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {filterExpenseCategory && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700">
+                Category: {(categories || []).find(c => String(c.id) === filterExpenseCategory)?.name || filterExpenseCategory}
+                <button onClick={() => setFilterExpenseCategory('')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {searchRemarks && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700">
+                Search: "{searchRemarks}"
+                <button onClick={() => setSearchRemarks('')}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {(amountMin || amountMax) && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-700">
+                Amount: {amountMin || '0'} — {amountMax || '∞'}
+                <button onClick={() => { setAmountMin(''); setAmountMax(''); }}><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            <button onClick={clearAllFilters} className="text-xs text-red-500 hover:text-red-700 ml-auto">Clear All</button>
+          </div>
+        )}
       </div>
 
       {loading ? (

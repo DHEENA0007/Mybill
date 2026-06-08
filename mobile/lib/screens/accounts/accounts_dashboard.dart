@@ -3,6 +3,9 @@ import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../services/api_service.dart';
+import 'incomes_screen.dart';
+import 'expenses_screen.dart';
+import 'accounts_settings_screen.dart';
 
 class AccountsDashboardScreen extends StatefulWidget {
   const AccountsDashboardScreen({super.key});
@@ -122,7 +125,7 @@ class _AccountsDashboardScreenState extends State<AccountsDashboardScreen> {
                 const Text('Recent Incomes', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                 TextButton(
                   onPressed: () {
-                    // Navigate to Incomes List
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const IncomesScreen()));
                   },
                   child: const Text('View All'),
                 ),
@@ -148,7 +151,7 @@ class _AccountsDashboardScreenState extends State<AccountsDashboardScreen> {
                 const Text('Recent Expenses', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
                 TextButton(
                   onPressed: () {
-                    // Navigate to Expenses List
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ExpensesScreen()));
                   },
                   child: const Text('View All'),
                 ),

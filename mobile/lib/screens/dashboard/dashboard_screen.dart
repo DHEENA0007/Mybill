@@ -6,6 +6,14 @@ import '../../services/api_service.dart';
 import '../products/products_screen.dart';
 import '../billing/billing_screen.dart';
 import '../accounts/accounts_dashboard.dart';
+import '../admin/company_settings_screen.dart';
+import '../admin/users_screen.dart';
+import '../suppliers/suppliers_screen.dart';
+import '../categories/categories_screen.dart';
+import '../customers/customers_screen.dart';
+import '../purchases/purchases_screen.dart';
+import '../accounts/accounts_settings_screen.dart';
+import '../reports/reports_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -155,6 +163,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Navigator.push(context, MaterialPageRoute(builder: (_) => const CategoriesScreen()));
             },
           ),
+          ListTile(
+            leading: const Icon(Icons.local_shipping),
+            title: const Text('Suppliers'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SuppliersScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.shopping_cart),
+            title: const Text('Purchases'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const PurchasesScreen()));
+            },
+          ),
           const Divider(),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -174,6 +198,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTap: () {
               Navigator.pop(context);
               Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen()));
+            },
+          ),
+          const Divider(),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text('ADMIN', style: TextStyle(fontSize: 12, color: AppTheme.textSecondary, fontWeight: FontWeight.bold)),
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings),
+            title: const Text('Company Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const CompanySettingsScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.account_balance),
+            title: const Text('Accounts Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AccountsSettingsScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.bar_chart),
+            title: const Text('Reports'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportsScreen()));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.manage_accounts),
+            title: const Text('User Management'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const UsersScreen()));
             },
           ),
         ],

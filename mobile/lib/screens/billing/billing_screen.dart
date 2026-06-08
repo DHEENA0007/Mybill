@@ -557,7 +557,7 @@ class _BillingScreenState extends State<BillingScreen> {
             ElevatedButton(
               onPressed: (_cart.isEmpty || _isSaving) ? null : _handleCheckout,
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size.infinity,
+                minimumSize: const Size.fromHeight(50),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               child: _isSaving 

@@ -210,20 +210,20 @@ class ApiService {
 
   // ── Accounts: Income Types ───────────────────────────────────────────
   Future<Response> getIncomeTypes() {
-    return dio.get('/income-types/');
+    return dio.get('/accounts-income-types/');
   }
 
   Future<Response> createIncomeType(Map<String, dynamic> data) {
-    return dio.post('/income-types/', data: data);
+    return dio.post('/accounts-income-types/', data: data);
   }
 
   Future<Response> deleteIncomeType(int id) {
-    return dio.delete('/income-types/$id/');
+    return dio.delete('/accounts-income-types/$id/');
   }
 
   // ── Accounts: Incomes ────────────────────────────────────────────────
   Future<Response> getIncomes({int page = 1, String? incomeType, String? dateFrom, String? dateTo}) {
-    return dio.get('/incomes/', queryParameters: {
+    return dio.get('/accounts-incomes/', queryParameters: {
       'page': page,
       if (incomeType != null) 'income_type': incomeType,
       if (dateFrom != null) 'date_from': dateFrom,
@@ -232,15 +232,15 @@ class ApiService {
   }
 
   Future<Response> createIncome(Map<String, dynamic> data) {
-    return dio.post('/incomes/', data: data);
+    return dio.post('/accounts-incomes/', data: data);
   }
 
   Future<Response> updateIncome(int id, Map<String, dynamic> data) {
-    return dio.put('/incomes/$id/', data: data);
+    return dio.put('/accounts-incomes/$id/', data: data);
   }
 
   Future<Response> deleteIncome(int id) {
-    return dio.delete('/incomes/$id/');
+    return dio.delete('/accounts-incomes/$id/');
   }
 
   // ── Accounts: Expense Categories ─────────────────────────────────────
@@ -249,7 +249,7 @@ class ApiService {
   }
 
   Future<Response> createExpenseCategory(Map<String, dynamic> data) {
-    return dio.post('/expense-categories/', data: data);
+    return dio.post('/accounts-expense-categories/', data: data);
   }
 
   Future<Response> deleteExpenseCategory(int id) {
@@ -264,7 +264,7 @@ class ApiService {
   }
 
   Future<Response> createExpenseSubcategory(Map<String, dynamic> data) {
-    return dio.post('/expense-subcategories/', data: data);
+    return dio.post('/accounts-expense-subcategories/', data: data);
   }
 
   Future<Response> deleteExpenseSubcategory(int id) {
