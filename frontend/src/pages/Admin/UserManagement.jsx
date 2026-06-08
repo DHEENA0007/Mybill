@@ -16,7 +16,7 @@ import usePermission from '../../hooks/usePermission';
 export default function UserManagement() {
   const [formOpen, setFormOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [form, setForm] = useState({ username: '', email: '', password: '', is_active: true, role_id: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '', is_active: true, role_id: '', allowed_portals: ['billing', 'accounts'] });
   const qc = useQueryClient();
   const { can } = usePermission();
 
@@ -63,7 +63,7 @@ export default function UserManagement() {
              if (r) currentRoleId = r.id;
           }
           setEditItem(row); 
-          setForm({ username: row.username, email: row.email, password: '', is_active: row.is_active, role_id: currentRoleId }); 
+          setForm({ username: row.username, email: row.email, password: '', is_active: row.is_active, role_id: currentRoleId, allowed_portals: row.allowed_portals || [] }); 
           setFormOpen(true); 
         }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Edit className="w-4 h-4" /></button>}
       </div>
@@ -74,7 +74,7 @@ export default function UserManagement() {
     <div className="space-y-4">
       <div className="flex justify-end">
         {can('users.manage') && (
-          <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setForm({ username: '', email: '', password: '', is_active: true, role_id: '' }); setFormOpen(true); }}>Add User</Button>
+          <Button icon={<Plus className="w-4 h-4" />} onClick={() => { setEditItem(null); setForm({ username: '', email: '', password: '', is_active: true, role_id: '', allowed_portals: ['billing', 'accounts'] }); setFormOpen(true); }}>Add User</Button>
         )}
       </div>
       <Card padding={false}>
@@ -99,7 +99,51 @@ export default function UserManagement() {
             <option value="">No Role</option>
             {(rolesData?.results || rolesData || []).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </Select>
-          <div className="flex justify-end"><Button type="submit" loading={saveMut.isPending}>Save User</Button></div>
+          
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">Portal Access</label>
+            <div className="flex gap-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={form.allowed_portals.includes('billing')}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm(f => ({
+                      ...f, 
+                      allowed_portals: checked 
+                        ? [...f.allowed_portals, 'billing'] 
+                        : f.allowed_portals.filter(p => p !== 'billing')
+                    }));
+                  }}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Billing & Inventory</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={form.allowed_portals.includes('accounts')}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm(f => ({
+                      ...f, 
+                      allowed_portals: checked 
+                        ? [...f.allowed_portals, 'accounts'] 
+                        : f.allowed_portals.filter(p => p !== 'accounts')
+                    }));
+                  }}
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Accounts & Finance</span>
+              </label>
+            </div>
+            {form.allowed_portals.length === 0 && (
+               <p className="text-xs text-red-500">User must have access to at least one portal to login.</p>
+            )}
+          </div>
+
+          <div className="flex justify-end"><Button type="submit" loading={saveMut.isPending} disabled={form.allowed_portals.length === 0}>Save User</Button></div>
         </form>
       </Modal>
     </div>

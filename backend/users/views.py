@@ -227,6 +227,7 @@ class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all().order_by('name')
     serializer_class = RoleSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [filters.SearchFilter]
     search_fields = ['name', 'description']
 
@@ -288,6 +289,7 @@ class PermissionViewSet(viewsets.ModelViewSet):
     queryset = Permission.objects.all().order_by('category', 'name')
     serializer_class = PermissionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'codename', 'category']
 
