@@ -306,9 +306,10 @@ export default function Reports() {
 
     const incomeRowsHTML = incomes.map((inc, i) => {
       const amt = Number(inc.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 });
+      const incLabel = inc.category_name ? `${inc.category_name} / ${inc.subcategory_name}` : 'Income';
       return `
       <tr>
-        <td style="padding: 10px 0; color: #334155;">${i + 1}. ${inc.income_type_name || 'Income'} ${inc.remarks ? '('+inc.remarks+')' : ''}</td>
+        <td style="padding: 10px 0; color: #334155;">${i + 1}. ${incLabel} ${inc.remarks ? '('+inc.remarks+')' : ''}</td>
         <td style="padding: 10px 0; text-align: right; font-weight: 600; color: #16a34a;">${amt}</td>
       </tr>
       `;

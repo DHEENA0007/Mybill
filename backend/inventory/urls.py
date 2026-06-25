@@ -15,9 +15,9 @@ router.register(r'product-prefixes', ProductPrefixViewSet, basename='product-pre
 router.register(r'expense-categories', ExpenseCategoryViewSet, basename='expense-categories')
 router.register(r'expense-subcategories', ExpenseSubcategoryViewSet, basename='expense-subcategories')
 router.register(r'expenses', ExpenseViewSet, basename='expenses')
-router.register(r'income-categories', IncomeCategoryViewSet, basename='income-categories')
-router.register(r'income-subcategories', IncomeSubcategoryViewSet, basename='income-subcategories')
-router.register(r'incomes', IncomeViewSet, basename='incomes')
+router.register(r'inventory-income-categories', IncomeCategoryViewSet, basename='inventory-income-categories')
+router.register(r'inventory-income-subcategories', IncomeSubcategoryViewSet, basename='inventory-income-subcategories')
+router.register(r'inventory-incomes', IncomeViewSet, basename='inventory-incomes')
 
 urlpatterns = [
     path('', include(router.urls)),
