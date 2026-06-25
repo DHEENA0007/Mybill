@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Edit2, Trash2, Wallet, Search, Filter, X, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { getIncomes, createIncome, updateIncome, deleteIncome, getIncomeCategories, getIncomeSubcategories } from '../../api/accounts';
+import { getInventoryIncomes as getIncomes, createInventoryIncome as createIncome, updateInventoryIncome as updateIncome, deleteInventoryIncome as deleteIncome, getInventoryIncomeCategories as getIncomeCategories, getInventoryIncomeSubcategories as getIncomeSubcategories } from '../../api/inventoryIncomes';
 import Modal from '../../components/UI/Modal';
 import Button from '../../components/UI/Button';
 import Input from '../../components/UI/Input';
@@ -15,7 +15,7 @@ const fmt = (v) => '₹' + Number(v || 0).toLocaleString('en-IN', { minimumFract
 
 const emptyForm = { category: '', subcategory: '', amount: '', date: new Date().toISOString().split('T')[0], remarks: '' };
 
-export default function Incomes() {
+export default function InventoryIncomes() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({ category: '', subcategory: '', date_from: '', date_to: '', search: '' });
@@ -30,12 +30,12 @@ export default function Incomes() {
   );
 
   const { data, isLoading } = useQuery({
-    queryKey: ['incomes', page, activeFilters],
+    queryKey: ['inventory-incomes', page, activeFilters],
     queryFn: () => getIncomes({ page, ...activeFilters }).then(r => r.data),
   });
 
   const { data: categories } = useQuery({
-    queryKey: ['income-categories'],
+    queryKey: ['inventory-income-categories'],
     queryFn: () => getIncomeCategories().then(r => {
       const d = r.data;
       return Array.isArray(d) ? d : (d?.results || []);
@@ -43,7 +43,7 @@ export default function Incomes() {
   });
 
   const { data: subcategoriesData } = useQuery({
-    queryKey: ['income-subcategories', filters.category || form.category],
+    queryKey: ['inventory-income-subcategories', filters.category || form.category],
     queryFn: () => getIncomeSubcategories({ category: filters.category || form.category }).then(r => {
       const d = r.data;
       return Array.isArray(d) ? d : (d?.results || []);
@@ -57,8 +57,8 @@ export default function Incomes() {
       : createIncome(payload),
     onSuccess: () => {
       toast.success(editing ? 'Income updated' : 'Income added');
-      qc.invalidateQueries({ queryKey: ['incomes'] });
-      qc.invalidateQueries({ queryKey: ['accounts-dashboard'] });
+      qc.invalidateQueries({ queryKey: ['inventory-incomes'] });
+      qc.invalidateQueries({ queryKey: ['inventory-dashboard'] });
       closeModal();
     },
   });
@@ -67,8 +67,8 @@ export default function Incomes() {
     mutationFn: (id) => deleteIncome(id),
     onSuccess: () => {
       toast.success('Income deleted');
-      qc.invalidateQueries({ queryKey: ['incomes'] });
-      qc.invalidateQueries({ queryKey: ['accounts-dashboard'] });
+      qc.invalidateQueries({ queryKey: ['inventory-incomes'] });
+      qc.invalidateQueries({ queryKey: ['inventory-dashboard'] });
       setDeleteTarget(null);
     },
   });

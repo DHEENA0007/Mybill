@@ -15,6 +15,8 @@ import PurchaseForm from './pages/Purchases/PurchaseForm';
 import PurchaseDetail from './pages/Purchases/PurchaseDetail';
 import InventoryExpenses from './pages/Inventory/InventoryExpenses';
 import InventoryExpenseSettings from './pages/Inventory/InventoryExpenseSettings';
+import InventoryIncomes from './pages/Inventory/InventoryIncomes';
+import InventoryIncomeSettings from './pages/Inventory/InventoryIncomeSettings';
 import CustomerList from './pages/Customers/CustomerList';
 import BillingScreen from './pages/Sales/BillingScreen';
 import InvoiceList from './pages/Sales/InvoiceList';
@@ -138,6 +140,8 @@ export default function App() {
             <Route path="reports/calendar" element={<CalendarReport />} />
             <Route path="expenses" element={<InventoryExpenses />} />
             <Route path="expense-categories" element={<InventoryExpenseSettings />} />
+            <Route path="incomes" element={<InventoryIncomes />} />
+            <Route path="income-categories" element={<InventoryIncomeSettings />} />
             <Route path="admin/users" element={<UserManagement />} />
             <Route path="admin/roles" element={<RoleManagement />} />
             <Route path="admin/company-setup" element={<CompanySetup />} />

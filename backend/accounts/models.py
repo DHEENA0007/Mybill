@@ -2,7 +2,7 @@ from users.managers import TenantManager
 from django.db import models
 from django.conf import settings
 
-class IncomeType(models.Model):
+class IncomeCategory(models.Model):
     company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
     objects = TenantManager()
     name = models.CharField(max_length=100)
@@ -11,10 +11,20 @@ class IncomeType(models.Model):
     def __str__(self):
         return self.name
 
+class IncomeSubcategory(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
+    objects = TenantManager()
+    category = models.ForeignKey(IncomeCategory, on_delete=models.CASCADE, related_name='subcategories')
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
 class Income(models.Model):
     company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
     objects = TenantManager()
-    income_type = models.ForeignKey(IncomeType, on_delete=models.PROTECT, related_name='incomes')
+    subcategory = models.ForeignKey(IncomeSubcategory, on_delete=models.PROTECT, related_name='incomes', null=True, blank=True)
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     date = models.DateField()
     remarks = models.TextField(blank=True, null=True)
@@ -23,7 +33,8 @@ class Income(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.income_type.name} - {self.amount}"
+        sub_name = self.subcategory.name if self.subcategory else 'No Subcategory'
+        return f"{sub_name} - {self.amount}"
 
 class ExpenseCategory(models.Model):
     company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)

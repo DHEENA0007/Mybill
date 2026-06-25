@@ -116,3 +116,35 @@ class ExpenseCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Expense
         fields = ['subcategory', 'amount', 'date', 'remarks']
+
+class IncomeSubcategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import IncomeSubcategory
+        model = IncomeSubcategory
+        fields = ['id', 'name', 'category']
+
+class IncomeCategorySerializer(serializers.ModelSerializer):
+    subcategories = IncomeSubcategorySerializer(many=True, read_only=True, source='inventory_subcategories')
+
+    class Meta:
+        from .models import IncomeCategory
+        model = IncomeCategory
+        fields = ['id', 'name', 'subcategories']
+
+class IncomeSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source='subcategory.category.name', read_only=True)
+    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
+    created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
+
+    class Meta:
+        from .models import Income
+        model = Income
+        fields = ['id', 'subcategory', 'category_name', 'subcategory_name', 
+                  'amount', 'date', 'remarks', 'created_by_name', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+class IncomeCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        from .models import Income
+        model = Income
+        fields = ['subcategory', 'amount', 'date', 'remarks']

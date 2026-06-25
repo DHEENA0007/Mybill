@@ -147,3 +147,45 @@ class Expense(models.Model):
     def __str__(self):
         return f"{self.subcategory.name} - {self.amount}"
 
+class IncomeCategory(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True, related_name='inventory_income_categories')
+    objects = TenantManager()
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'inventory_income_categories'
+
+    def __str__(self):
+        return self.name
+
+class IncomeSubcategory(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True, related_name='inventory_income_subcategories')
+    objects = TenantManager()
+    category = models.ForeignKey(IncomeCategory, on_delete=models.CASCADE, related_name='inventory_subcategories')
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'inventory_income_subcategories'
+
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+class Income(models.Model):
+    company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True, related_name='inventory_incomes')
+    objects = TenantManager()
+    subcategory = models.ForeignKey(IncomeSubcategory, on_delete=models.PROTECT, related_name='inventory_incomes')
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    date = models.DateField()
+    remarks = models.TextField(blank=True, null=True)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='inventory_incomes_created')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'inventory_incomes'
+
+    def __str__(self):
+        return f"{self.subcategory.name} - {self.amount}"
+

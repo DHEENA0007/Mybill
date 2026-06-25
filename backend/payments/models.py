@@ -32,7 +32,7 @@ class Payment(models.Model):
     reference_id = models.CharField(max_length=100, help_text='Invoice number or Purchase ID')
     amount = models.DecimalField(max_digits=14, decimal_places=2)
     payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='cash')
-    payment_date = models.DateField(default=timezone.now)
+    payment_date = models.DateField(default=timezone.localdate)
     notes = models.TextField(blank=True, null=True)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,

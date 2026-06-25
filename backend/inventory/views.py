@@ -8,13 +8,15 @@ from django.db.models import Q, Sum, F
 
 from .models import (
     Category, Product, StockTransaction, ProductPrefix, 
-    ExpenseCategory, ExpenseSubcategory, Expense
+    ExpenseCategory, ExpenseSubcategory, Expense,
+    IncomeCategory, IncomeSubcategory, Income
 )
 from .serializers import (
     CategorySerializer, ProductSerializer, ProductListSerializer,
     StockTransactionSerializer, StockAdjustmentSerializer,
     ProductPrefixSerializer, ExpenseCategorySerializer, 
-    ExpenseSubcategorySerializer, ExpenseSerializer, ExpenseCreateSerializer
+    ExpenseSubcategorySerializer, ExpenseSerializer, ExpenseCreateSerializer,
+    IncomeCategorySerializer, IncomeSubcategorySerializer, IncomeSerializer, IncomeCreateSerializer
 )
 
 
@@ -215,6 +217,63 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update']:
             return ExpenseCreateSerializer
         return ExpenseSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(
+            company=self.request.user.company,
+            created_by=self.request.user
+        )
+
+class IncomeCategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = IncomeCategorySerializer
+
+    def get_queryset(self):
+        return IncomeCategory.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class IncomeSubcategoryViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    serializer_class = IncomeSubcategorySerializer
+    filterset_fields = ['category']
+
+    def get_queryset(self):
+        return IncomeSubcategory.objects.filter(company=self.request.user.company)
+
+    def perform_create(self, serializer):
+        serializer.save(company=self.request.user.company)
+
+class IncomeViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ['subcategory', 'date']
+    search_fields = ['remarks']
+    ordering_fields = ['date', 'amount', 'created_at']
+    ordering = ['-date', '-created_at']
+
+    def get_queryset(self):
+        qs = Income.objects.filter(company=self.request.user.company).select_related('subcategory__category', 'created_by')
+        
+        # Date range filtering
+        date_from = self.request.query_params.get('date_from')
+        date_to = self.request.query_params.get('date_to')
+        if date_from:
+            qs = qs.filter(date__gte=date_from)
+        if date_to:
+            qs = qs.filter(date__lte=date_to)
+            
+        # Category filtering
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(subcategory__category_id=category)
+            
+        return qs
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return IncomeCreateSerializer
+        return IncomeSerializer
 
     def perform_create(self, serializer):
         serializer.save(

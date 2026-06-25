@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Download, Filter, PieChart, BarChart2, List, TrendingUp, TrendingDown, Printer, Search, X, ChevronDown, ChevronUp, Calendar, SlidersHorizontal } from 'lucide-react';
-import { getIncomes, getExpenses, getIncomeTypes, getExpenseCategories } from '../../api/accounts';
+import { getIncomes, getExpenses, getIncomeCategories, getExpenseCategories } from '../../api/accounts';
 import Button from '../../components/UI/Button';
 import Select from '../../components/UI/Select';
 import Input from '../../components/UI/Input';
@@ -153,8 +153,8 @@ export default function Reports() {
   });
 
   const { data: types } = useQuery({
-    queryKey: ['income-types'],
-    queryFn: () => getIncomeTypes().then(r => {
+    queryKey: ['income-categories'],
+    queryFn: () => getIncomeCategories().then(r => {
       const d = r.data;
       return Array.isArray(d) ? d : (d?.results || []);
     }),
@@ -178,11 +178,11 @@ export default function Reports() {
     if (txnType === 'expense') return [];
     let filtered = rawIncomes;
     if (filterIncomeType) {
-      filtered = filtered.filter(i => String(i.income_type) === filterIncomeType || String(i.income_type_id) === filterIncomeType);
+      filtered = filtered.filter(i => String(i.category_id) === filterIncomeType || i.category_name === filterIncomeType);
     }
     if (searchRemarks) {
       const q = searchRemarks.toLowerCase();
-      filtered = filtered.filter(i => (i.remarks || '').toLowerCase().includes(q) || (i.income_type_name || '').toLowerCase().includes(q));
+      filtered = filtered.filter(i => (i.remarks || '').toLowerCase().includes(q) || (i.category_name || '').toLowerCase().includes(q) || (i.subcategory_name || '').toLowerCase().includes(q));
     }
     if (amountMin) filtered = filtered.filter(i => parseFloat(i.amount) >= parseFloat(amountMin));
     if (amountMax) filtered = filtered.filter(i => parseFloat(i.amount) <= parseFloat(amountMax));
@@ -193,7 +193,7 @@ export default function Reports() {
     if (txnType === 'income') return [];
     let filtered = rawExpenses;
     if (filterExpenseCategory) {
-      filtered = filtered.filter(e => String(e.category) === filterExpenseCategory || String(e.category_id) === filterExpenseCategory || e.category_name === filterExpenseCategory);
+      filtered = filtered.filter(e => String(e.category_id) === filterExpenseCategory || e.category_name === filterExpenseCategory);
     }
     if (searchRemarks) {
       const q = searchRemarks.toLowerCase();
@@ -208,11 +208,11 @@ export default function Reports() {
   const totalExpense = expenses.reduce((s, r) => s + parseFloat(r.amount || 0), 0);
   const netBalance = totalIncome - totalExpense;
 
-  // Group incomes by type
-  const incomeByType = {};
+  // Group incomes by category
+  const incomeByCategory = {};
   incomes.forEach(i => {
-    const name = i.income_type_name || 'Unknown';
-    incomeByType[name] = (incomeByType[name] || 0) + parseFloat(i.amount || 0);
+    const name = i.category_name || 'Unknown';
+    incomeByCategory[name] = (incomeByCategory[name] || 0) + parseFloat(i.amount || 0);
   });
 
   // Group expenses by category
@@ -231,7 +231,7 @@ export default function Reports() {
 
   // Combined ledger sorted by date
   const ledger = [
-    ...incomes.map(i => ({ ...i, type: 'income', label: i.income_type_name, amt: parseFloat(i.amount) })),
+    ...incomes.map(i => ({ ...i, type: 'income', label: `${i.category_name} / ${i.subcategory_name}`, amt: parseFloat(i.amount) })),
     ...expenses.map(e => ({ ...e, type: 'expense', label: `${e.category_name} / ${e.subcategory_name}`, amt: parseFloat(e.amount) })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -552,10 +552,10 @@ export default function Reports() {
                 </div>
               </div>
 
-              {/* Income Type filter */}
-              {txnType !== 'expense' && (
+              {/* Income Category filter */}
+              {(txnType === 'all' || txnType === 'income') && (
                 <div className="min-w-[160px]">
-                  <Select label="Income Type" value={filterIncomeType} onChange={(e) => setFilterIncomeType(e.target.value)}>
+                  <Select label="Income Category" value={filterIncomeType} onChange={(e) => setFilterIncomeType(e.target.value)}>
                     <option value="">All Types</option>
                     {(types || []).map(t => (
                       <option key={t.id} value={t.id}>{t.name}</option>
@@ -674,14 +674,14 @@ export default function Reports() {
 
           {view === 'summary' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Income By Type */}
+              {/* Income By Category */}
               <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
                 <div className="p-4 border-b border-gray-100">
-                  <h3 className="text-sm font-semibold text-gray-700">Income by Type</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">Income by Category</h3>
                 </div>
-                {Object.keys(incomeByType).length ? (
+                {Object.keys(incomeByCategory).length ? (
                   <div className="p-4 space-y-3">
-                    {Object.entries(incomeByType).sort(([,a],[,b]) => b - a).map(([name, total]) => {
+                    {Object.entries(incomeByCategory).sort(([,a],[,b]) => b - a).map(([name, total]) => {
                       const pct = totalIncome > 0 ? (total / totalIncome) * 100 : 0;
                       return (
                         <div key={name}>

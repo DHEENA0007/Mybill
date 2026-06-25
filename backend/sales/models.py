@@ -76,7 +76,7 @@ class SalesInvoice(models.Model):
     ]
     invoice_number = models.CharField(max_length=30, editable=False)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, related_name='invoices', null=True, blank=True)
-    invoice_date = models.DateField(default=timezone.now)
+    invoice_date = models.DateField(default=timezone.localdate)
     subtotal = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     tax_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)

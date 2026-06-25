@@ -1,13 +1,22 @@
 from rest_framework import serializers
-from .models import IncomeType, Income, ExpenseCategory, ExpenseSubcategory, Expense
+from .models import IncomeCategory, IncomeSubcategory, Income, ExpenseCategory, ExpenseSubcategory, Expense
 
-class IncomeTypeSerializer(serializers.ModelSerializer):
+class IncomeSubcategorySerializer(serializers.ModelSerializer):
     class Meta:
-        model = IncomeType
+        model = IncomeSubcategory
+        fields = '__all__'
+
+class IncomeCategorySerializer(serializers.ModelSerializer):
+    subcategories = IncomeSubcategorySerializer(many=True, read_only=True)
+
+    class Meta:
+        model = IncomeCategory
         fields = '__all__'
 
 class IncomeSerializer(serializers.ModelSerializer):
-    income_type_name = serializers.CharField(source='income_type.name', read_only=True)
+    category_id = serializers.IntegerField(source='subcategory.category.id', read_only=True)
+    category_name = serializers.CharField(source='subcategory.category.name', read_only=True)
+    subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
 
     class Meta:
         model = Income
@@ -27,6 +36,7 @@ class ExpenseCategorySerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ExpenseSerializer(serializers.ModelSerializer):
+    category_id = serializers.IntegerField(source='subcategory.category.id', read_only=True)
     category_name = serializers.CharField(source='subcategory.category.name', read_only=True)
     subcategory_name = serializers.CharField(source='subcategory.name', read_only=True)
 

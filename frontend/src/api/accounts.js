@@ -3,11 +3,17 @@ import api from './axios';
 // Dashboard
 export const getAccountsDashboard = () => api.get('/accounts-dashboard/');
 
-// Income Types
-export const getIncomeTypes = () => api.get('/income-types/');
-export const createIncomeType = (data) => api.post('/income-types/', data);
-export const updateIncomeType = (id, data) => api.put(`/income-types/${id}/`, data);
-export const deleteIncomeType = (id) => api.delete(`/income-types/${id}/`);
+// Income Categories
+export const getIncomeCategories = () => api.get('/income-categories/');
+export const createIncomeCategory = (data) => api.post('/income-categories/', data);
+export const updateIncomeCategory = (id, data) => api.put(`/income-categories/${id}/`, data);
+export const deleteIncomeCategory = (id) => api.delete(`/income-categories/${id}/`);
+
+// Income Subcategories
+export const getIncomeSubcategories = (params) => api.get('/income-subcategories/', { params });
+export const createIncomeSubcategory = (data) => api.post('/income-subcategories/', data);
+export const updateIncomeSubcategory = (id, data) => api.put(`/income-subcategories/${id}/`, data);
+export const deleteIncomeSubcategory = (id) => api.delete(`/income-subcategories/${id}/`);
 
 // Incomes
 export const getIncomes = (params) => api.get('/incomes/', { params });

@@ -1,13 +1,14 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
-    IncomeTypeViewSet, IncomeViewSet,
+    IncomeCategoryViewSet, IncomeSubcategoryViewSet, IncomeViewSet,
     ExpenseCategoryViewSet, ExpenseSubcategoryViewSet, ExpenseViewSet,
     AccountsDashboardViewSet
 )
 
 router = DefaultRouter()
-router.register(r'income-types', IncomeTypeViewSet)
+router.register(r'income-categories', IncomeCategoryViewSet, basename='income-categories')
+router.register(r'income-subcategories', IncomeSubcategoryViewSet, basename='income-subcategories')
 router.register(r'incomes', IncomeViewSet, basename='incomes')
 router.register(r'accounts-expense-categories', ExpenseCategoryViewSet, basename='accounts-expense-categories')
 router.register(r'accounts-expense-subcategories', ExpenseSubcategoryViewSet, basename='accounts-expense-subcategories')

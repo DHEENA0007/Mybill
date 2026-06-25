@@ -7,34 +7,49 @@ from django.db.models import Sum
 from django.db.models.functions import TruncMonth
 from django.utils import timezone
 from datetime import timedelta
-from .models import IncomeType, Income, ExpenseCategory, ExpenseSubcategory, Expense
+from .models import IncomeCategory, IncomeSubcategory, Income, ExpenseCategory, ExpenseSubcategory, Expense
 from .serializers import (
-    IncomeTypeSerializer, IncomeSerializer,
+    IncomeCategorySerializer, IncomeSubcategorySerializer, IncomeSerializer,
     ExpenseCategorySerializer, ExpenseSubcategorySerializer, ExpenseSerializer
 )
 
 
-class IncomeTypeViewSet(TenantViewSet):
-    queryset = IncomeType.objects.all().order_by('name')
-    serializer_class = IncomeTypeSerializer
+class IncomeCategoryViewSet(TenantViewSet):
+    queryset = IncomeCategory.objects.all().prefetch_related('subcategories').order_by('name')
+    serializer_class = IncomeCategorySerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None  # No pagination for dropdown lists
 
+class IncomeSubcategoryViewSet(TenantViewSet):
+    queryset = IncomeSubcategory.objects.all().select_related('category').order_by('name')
+    serializer_class = IncomeSubcategorySerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        category = self.request.query_params.get('category')
+        if category:
+            qs = qs.filter(category_id=category)
+        return qs
 
 class IncomeViewSet(TenantViewSet):
-    queryset = Income.objects.all().select_related('income_type').order_by('-date', '-id')
+    queryset = Income.objects.all().select_related('subcategory__category').order_by('-date', '-id')
     serializer_class = IncomeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         qs = super().get_queryset()
         # Filters
-        income_type = self.request.query_params.get('income_type')
+        category = self.request.query_params.get('category')
+        subcategory = self.request.query_params.get('subcategory')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
         search = self.request.query_params.get('search')
-        if income_type:
-            qs = qs.filter(income_type_id=income_type)
+        if category:
+            qs = qs.filter(subcategory__category_id=category)
+        if subcategory:
+            qs = qs.filter(subcategory_id=subcategory)
         if date_from:
             qs = qs.filter(date__gte=date_from)
         if date_to:
@@ -171,17 +186,17 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
             .order_by('-total')
         )
 
-        # Income by type
-        income_by_type = list(
+        # Income by type/category
+        income_by_category = list(
             incomes_qs.filter(date__gte=first_of_month, date__lte=today)
-            .values('income_type__name')
+            .values('subcategory__category__name')
             .annotate(total=Sum('amount'))
             .order_by('-total')
         )
 
         # Recent transactions
         recent_incomes = IncomeSerializer(
-            incomes_qs.select_related('income_type').order_by('-date', '-id')[:5], many=True
+            incomes_qs.select_related('subcategory__category').order_by('-date', '-id')[:5], many=True
         ).data
         recent_expenses = ExpenseSerializer(
             expenses_qs.select_related('subcategory__category').order_by('-date', '-id')[:5], many=True
@@ -217,9 +232,9 @@ class AccountsDashboardViewSet(viewsets.ViewSet):
                 {'name': e['subcategory__category__name'], 'total': float(e['total'])}
                 for e in expense_by_category
             ],
-            'income_by_type': [
-                {'name': i['income_type__name'], 'total': float(i['total'])}
-                for i in income_by_type
+            'income_by_category': [
+                {'name': i['subcategory__category__name'] if i['subcategory__category__name'] else 'No Category', 'total': float(i['total'])}
+                for i in income_by_category
             ],
             'recent_incomes': recent_incomes,
             'recent_expenses': recent_expenses,

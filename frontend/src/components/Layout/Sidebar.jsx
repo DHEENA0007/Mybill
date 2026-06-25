@@ -35,6 +35,8 @@ const navGroups = [
       { to: '/purchases', icon: ShoppingCart, label: 'Purchases', perm: ['purchases.view', 'purchases.create'] },
       { to: '/expenses', icon: CreditCard, label: 'Expenses' },
       { to: '/expense-categories', icon: FolderTree, label: 'Expense Categories' },
+      { to: '/incomes', icon: CreditCard, label: 'Incomes' },
+      { to: '/income-categories', icon: FolderTree, label: 'Income Categories' },
     ],
   },
   {
