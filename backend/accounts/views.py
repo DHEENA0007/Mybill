@@ -59,12 +59,29 @@ class IncomeViewSet(TenantViewSet):
         return qs
 
     def perform_create(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            cat = IncomeCategory.objects.get(id=category_id)
+            subcat, _ = IncomeSubcategory.objects.get_or_create(category=cat, name="General", company=cat.company)
+            serializer.validated_data['subcategory'] = subcat
+            
         super().perform_create(serializer)
         # Also set created_by on the instance
         instance = serializer.instance
         instance.created_by = self.request.user
         instance.save(update_fields=['created_by'])
 
+
+    def perform_update(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            cat = IncomeCategory.objects.get(id=category_id)
+            subcat, _ = IncomeSubcategory.objects.get_or_create(category=cat, name="General", company=cat.company)
+            serializer.validated_data['subcategory'] = subcat
+            
+        super().perform_update(serializer)
 
 class ExpenseCategoryViewSet(TenantViewSet):
     queryset = ExpenseCategory.objects.all().prefetch_related('subcategories').order_by('name')

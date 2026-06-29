@@ -94,6 +94,7 @@ export default function InventoryIncomes() {
       return;
     }
     saveMutation.mutate({
+      category_id: form.category ? Number(form.category) : null,
       subcategory: form.subcategory ? Number(form.subcategory) : null,
       amount: form.amount,
       date: form.date,
