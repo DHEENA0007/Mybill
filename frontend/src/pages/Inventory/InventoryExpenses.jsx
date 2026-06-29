@@ -139,12 +139,13 @@ export default function InventoryExpenses() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.subcategory || !form.amount || !form.date) {
+    if (!form.amount || !form.date) {
       toast.error('Please fill all required fields');
       return;
     }
     saveMutation.mutate({
-      subcategory: Number(form.subcategory),
+      category_id: formCategory ? Number(formCategory) : null,
+      subcategory: form.subcategory ? Number(form.subcategory) : null,
       amount: form.amount,
       date: form.date,
       remarks: form.remarks,
@@ -398,7 +399,7 @@ export default function InventoryExpenses() {
           </Select>
 
           <Select
-            label="Subcategory *"
+            label="Subcategory"
             value={form.subcategory}
             onChange={(e) => setForm(f => ({ ...f, subcategory: e.target.value }))}
             disabled={!formCategory}

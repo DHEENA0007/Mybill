@@ -129,10 +129,29 @@ class ExpenseViewSet(TenantViewSet):
         return qs
 
     def perform_create(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            from .models import ExpenseCategory, ExpenseSubcategory
+            cat = ExpenseCategory.objects.get(id=category_id)
+            subcat, _ = ExpenseSubcategory.objects.get_or_create(category=cat, name="General", company=cat.company)
+            serializer.validated_data['subcategory'] = subcat
+            
         super().perform_create(serializer)
         instance = serializer.instance
         instance.created_by = self.request.user
         instance.save(update_fields=['created_by'])
+
+    def perform_update(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            from .models import ExpenseCategory, ExpenseSubcategory
+            cat = ExpenseCategory.objects.get(id=category_id)
+            subcat, _ = ExpenseSubcategory.objects.get_or_create(category=cat, name="General", company=cat.company)
+            serializer.validated_data['subcategory'] = subcat
+            
+        super().perform_update(serializer)
 
 
 class AccountsDashboardViewSet(viewsets.ViewSet):

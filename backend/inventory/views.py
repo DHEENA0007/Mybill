@@ -219,10 +219,27 @@ class ExpenseViewSet(viewsets.ModelViewSet):
         return ExpenseSerializer
 
     def perform_create(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            cat = ExpenseCategory.objects.get(id=category_id, company=self.request.user.company)
+            subcat, _ = ExpenseSubcategory.objects.get_or_create(category=cat, name="General", company=self.request.user.company)
+            serializer.validated_data['subcategory'] = subcat
+            
         serializer.save(
             company=self.request.user.company,
             created_by=self.request.user
         )
+
+    def perform_update(self, serializer):
+        category_id = self.request.data.get('category_id')
+        subcategory = serializer.validated_data.get('subcategory')
+        if not subcategory and category_id:
+            cat = ExpenseCategory.objects.get(id=category_id, company=self.request.user.company)
+            subcat, _ = ExpenseSubcategory.objects.get_or_create(category=cat, name="General", company=self.request.user.company)
+            serializer.validated_data['subcategory'] = subcat
+            
+        serializer.save()
 
 class IncomeCategoryViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
