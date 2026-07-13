@@ -43,7 +43,7 @@ class CustomerViewSet(TenantViewSet):
     @action(detail=True, methods=['get'])
     def credit_history(self, request, pk=None):
         customer = self.get_object()
-        credits = customer.credit_logs.all().order_by('-created_at')
+        credits = customer.credit_logs.exclude(invoice__status='cancelled').order_by('-created_at')
         serializer = CreditLogSerializer(credits, many=True)
         return Response(serializer.data)
 
@@ -140,6 +140,17 @@ class SalesInvoiceViewSet(TenantViewSet):
                     reference_id=invoice.invoice_number,
                     notes=f'Invoice {invoice.invoice_number} cancelled'
                 )
+
+            # Reverse credit logs and customer credit balance
+            for credit_log in invoice.credit_logs.all():
+                if credit_log.customer and credit_log.remaining_balance > 0:
+                    credit_log.customer.credit_balance = max(
+                        credit_log.customer.credit_balance - credit_log.remaining_balance,
+                        Decimal('0')
+                    )
+                    credit_log.customer.save()
+                credit_log.delete()
+
             invoice.status = 'cancelled'
             invoice.save()
         return Response({'message': f'Invoice {invoice.invoice_number} cancelled.'})
@@ -153,7 +164,7 @@ class CreditLogViewSet(TenantViewSet):
     search_fields = ['customer__name', 'invoice__invoice_number']
 
     def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().exclude(invoice__status='cancelled')
         customer = self.request.query_params.get('customer')
         has_balance = self.request.query_params.get('has_balance')
         if customer:
@@ -216,6 +227,26 @@ class CreditLogViewSet(TenantViewSet):
             })
         except (ValueError, TypeError):
             return Response({'error': 'Invalid amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Return aggregate totals across ALL credit logs matching current filters."""
+        from django.db.models import Sum
+        queryset = self.get_queryset()
+        # Also apply settled filter server-side when requested
+        status_filter = request.query_params.get('status')
+        if status_filter == 'settled':
+            queryset = queryset.filter(remaining_balance__lte=0)
+        totals = queryset.aggregate(
+            total_credit=Sum('credit_amount'),
+            total_paid=Sum('paid_amount'),
+            total_remaining=Sum('remaining_balance'),
+        )
+        return Response({
+            'total_credit': totals['total_credit'] or 0,
+            'total_paid': totals['total_paid'] or 0,
+            'total_remaining': totals['total_remaining'] or 0,
+        })
 
     @action(detail=False, methods=['get'])
     def customers_with_credit(self, request):
