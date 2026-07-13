@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Banknote, Search, Filter, CheckCircle2, AlertCircle, User } from 'lucide-react';
-import { getCreditLogs, settleCreditLog, getCustomersWithCredit } from '../../api/invoices';
+import { getCreditLogs, getCreditLogSummary, settleCreditLog, getCustomersWithCredit } from '../../api/invoices';
 import { getCustomers } from '../../api/customers';
 import Card from '../../components/UI/Card';
 import Table from '../../components/UI/Table';
@@ -31,6 +31,17 @@ export default function CreditLog() {
     },
   });
 
+  const { data: summary } = useQuery({
+    queryKey: ['credit-logs-summary', filterCustomer, filterStatus],
+    queryFn: () => {
+      const params = {};
+      if (filterCustomer) params.customer = filterCustomer;
+      if (filterStatus === 'pending') params.has_balance = 'true';
+      if (filterStatus === 'settled') params.status = 'settled';
+      return getCreditLogSummary(params).then(r => r.data);
+    },
+  });
+
   const { data: customersWithCredit } = useQuery({
     queryKey: ['customers-with-credit'],
     queryFn: () => getCustomersWithCredit().then(r => r.data),
@@ -41,6 +52,7 @@ export default function CreditLog() {
     onSuccess: () => {
       toast.success('Credit settled successfully!');
       qc.invalidateQueries(['credit-logs']);
+      qc.invalidateQueries(['credit-logs-summary']);
       qc.invalidateQueries(['customers-with-credit']);
       qc.invalidateQueries(['payments']);
       setSettleOpen(false);
@@ -69,9 +81,9 @@ export default function CreditLog() {
     ? allCredits.filter(c => parseFloat(c.remaining_balance) <= 0)
     : allCredits;
 
-  const totalCredit = credits.reduce((s, c) => s + parseFloat(c.credit_amount || 0), 0);
-  const totalPaid = credits.reduce((s, c) => s + parseFloat(c.paid_amount || 0), 0);
-  const totalRemaining = credits.reduce((s, c) => s + parseFloat(c.remaining_balance || 0), 0);
+  const totalCredit = parseFloat(summary?.total_credit || 0);
+  const totalPaid = parseFloat(summary?.total_paid || 0);
+  const totalRemaining = parseFloat(summary?.total_remaining || 0);
 
   const columns = [
     { key: 'customer_name', label: 'Customer', render: (v) => (
