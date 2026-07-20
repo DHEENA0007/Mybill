@@ -76,7 +76,7 @@ export default function InvoiceDetail() {
       <Modal open={payOpen} onClose={() => setPayOpen(false)} title="Record Payment" size="sm">
         <form onSubmit={(e) => { e.preventDefault(); payMut.mutate(payForm); }} className="space-y-4">
           <div className="bg-slate-50 rounded-lg p-3 text-sm"><p className="text-gray-500">Balance Due: <span className="font-bold text-red-600">{formatCurrency(inv.balance_due)}</span></p></div>
-          <Input label="Amount" type="number" step="0.01" value={payForm.amount} onChange={(e) => setPayForm(f => ({ ...f, amount: e.target.value }))} required prefix="₹" />
+          <Input label="Amount" type="number" step="0.01" value={payForm.amount} onChange={(e) => setPayForm(f => ({ ...f, amount: e.target.value }))} required prefix="₹" className="no-spinner" />
           <Select label="Payment Method" value={payForm.payment_method} onChange={(e) => setPayForm(f => ({ ...f, payment_method: e.target.value }))}>
             <option value="">Select method</option>
             {paymentMethods.map(({ value, label }) => (

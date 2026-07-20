@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye } from 'lucide-react';
+import { Plus, Eye, Pencil } from 'lucide-react';
 import { getInvoices } from '../../api/invoices';
 import usePermission from '../../hooks/usePermission';
 import Card from '../../components/UI/Card';
@@ -35,7 +35,12 @@ export default function InvoiceList() {
     { key: 'balance_due', label: 'Balance', render: (v) => <span className={v > 0 ? 'text-red-600 font-medium' : 'text-gray-400'}>{formatCurrency(v)}</span> },
     { key: 'status', label: 'Status', render: (v) => <StatusBadge status={v} /> },
     { key: 'view', label: '', render: (_, row) => (
-      <button onClick={() => navigate(`/invoices/${row.id}`)} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></button>
+      <div className="flex items-center gap-1">
+        {row.status !== 'cancelled' && (
+          <button onClick={(e) => { e.stopPropagation(); navigate(`/invoices/${row.id}/edit`); }} className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"><Pencil className="w-4 h-4" /></button>
+        )}
+        <button onClick={(e) => { e.stopPropagation(); navigate(`/invoices/${row.id}`); }} className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"><Eye className="w-4 h-4" /></button>
+      </div>
     )},
   ];
 

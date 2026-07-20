@@ -21,6 +21,7 @@ import CustomerList from './pages/Customers/CustomerList';
 import BillingScreen from './pages/Sales/BillingScreen';
 import InvoiceList from './pages/Sales/InvoiceList';
 import InvoiceDetail from './pages/Sales/InvoiceDetail';
+import InvoiceEdit from './pages/Sales/InvoiceEdit';
 import Returns from './pages/Returns/Returns';
 import Payments from './pages/Payments/Payments';
 import CreditLog from './pages/Credits/CreditLog';
@@ -131,6 +132,7 @@ export default function App() {
             <Route path="billing" element={<BillingScreen />} />
             <Route path="invoices" element={<InvoiceList />} />
             <Route path="invoices/:id" element={<InvoiceDetail />} />
+            <Route path="invoices/:id/edit" element={<InvoiceEdit />} />
             <Route path="returns" element={<Returns />} />
             <Route path="payments" element={<Payments />} />
             <Route path="credits" element={<CreditLog />} />

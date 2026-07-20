@@ -86,6 +86,17 @@ class SalesInvoiceViewSet(TenantViewSet):
             kwargs['company'] = user.company
         serializer.save(**kwargs)
 
+    def update(self, request, *args, **kwargs):
+        invoice = self.get_object()
+        if invoice.status == 'cancelled':
+            return Response({'error': 'Cannot update a cancelled invoice.'}, status=status.HTTP_400_BAD_REQUEST)
+        return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        instance.total_amount = instance.subtotal + instance.tax_amount - instance.discount_amount
+        instance.update_balance()
+
     @action(detail=True, methods=['post'])
     def record_payment(self, request, pk=None):
         invoice = self.get_object()

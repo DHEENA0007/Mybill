@@ -1,0 +1,23 @@
+# Backups - never commit these
+backups/
+
+# Environment variables - never commit credentials
+backend/.env
+frontend/.env
+mobile/.env
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Database
+*.sqlite3
+*.dump
+
+# Node
+node_modules/

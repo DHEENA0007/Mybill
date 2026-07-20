@@ -185,7 +185,7 @@ export default function BillingScreen() {
                   </div>
                   <div className="col-span-3">
                     <input type="number" step="0.01" value={item.unit_price} onChange={(e) => updateCart(idx, 'unit_price', parseFloat(e.target.value) || 0)}
-                      className="w-full text-right border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" />
+                      className="w-full text-right border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 no-spinner" />
                   </div>
                   <div className="col-span-2 text-right font-semibold text-sm text-gray-800">
                     {formatCurrency(item.quantity * item.unit_price)}
@@ -238,7 +238,7 @@ export default function BillingScreen() {
             <div className="flex justify-between items-center text-gray-600">
                <span>Discount</span>
                <input type="number" step="0.01" value={discountAmount} onChange={(e) => setDiscountAmount(e.target.value)}
-                  className="w-24 text-right border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500" placeholder="0.00" />
+                  className="w-24 text-right border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500 no-spinner" placeholder="0.00" />
             </div>
             <div className="flex justify-between font-bold text-base pt-2 border-t border-gray-100"><span>Total</span><span className="text-indigo-600">{formatCurrency(total)}</span></div>
           </div>
@@ -259,7 +259,7 @@ export default function BillingScreen() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
               <input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)}
                 placeholder={paymentMethod === 'credit' ? 'Initial Payment (Optional)' : formatCurrency(total).replace('₹','')}
-                className="w-full pl-7 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+                className="w-full pl-7 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 no-spinner" />
             </div>
             {paidAmount && parseFloat(paidAmount) < total && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
