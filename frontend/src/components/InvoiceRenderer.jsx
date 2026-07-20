@@ -49,6 +49,9 @@ export const DEFAULT_CONFIG = {
   // Footer
   footer_text: 'Thank you for your business!',
   footer_align: 'center',
+
+  // Paper format
+  paper_format: 'a4',
 };
 
 export const SAMPLE_INVOICE = {
@@ -157,12 +160,107 @@ const STATUS_COLORS = {
   cancelled: '#ef4444',
 };
 
+// ── Thermal 3-inch receipt layout ─────────────────────────────
+function TRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <span>{label}</span><span>{value}</span>
+    </div>
+  );
+}
+
+function ThermalLayout({ cfg, inv, sub }) {
+  const fs = cfg.font_size_base || 12;
+  const bName  = sub(cfg.business_name);
+  const bTag   = sub(cfg.business_tagline);
+  const bPhone = sub(cfg.business_phone);
+  const bEmail = sub(cfg.business_email);
+  const bAddr  = sub(cfg.business_address);
+  const bGstin = sub(cfg.business_gstin);
+  const footer = sub(cfg.footer_text);
+  const Dash   = () => <div style={{ borderTop: '1px dashed #444', margin: '6px 0' }} />;
+
+  return (
+    <div style={{ fontFamily: '"Courier New", Courier, monospace', fontSize: `${fs}px`, color: '#000', background: '#fff', padding: '10px 12px', maxWidth: '302px', margin: '0 auto', lineHeight: 1.5 }}>
+      <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+        {bName  && <div style={{ fontWeight: 700, fontSize: `${fs + 3}px`, letterSpacing: '0.5px' }}>{bName}</div>}
+        {bTag   && <div style={{ fontSize: `${fs - 1}px` }}>{bTag}</div>}
+        {bPhone && <div style={{ fontSize: `${fs - 1}px` }}>{bPhone}</div>}
+        {bEmail && <div style={{ fontSize: `${fs - 1}px` }}>{bEmail}</div>}
+        {bAddr  && <div style={{ fontSize: `${fs - 1}px`, whiteSpace: 'pre-wrap' }}>{bAddr}</div>}
+        {bGstin && <div style={{ fontSize: `${fs - 1}px` }}>GSTIN: {bGstin}</div>}
+      </div>
+
+      <Dash />
+
+      <div style={{ fontSize: `${fs - 1}px` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span>Bill No: <b>{inv.invoice_number}</b></span>
+          <span>{formatDate(inv.invoice_date)}</span>
+        </div>
+        {inv.customer_name && inv.customer_name !== 'Walk-in Customer' && (
+          <div>Customer: {inv.customer_name}</div>
+        )}
+        {inv.customer_phone && <div>Ph: {inv.customer_phone}</div>}
+      </div>
+
+      <Dash />
+
+      <div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: `${fs - 1}px`, borderBottom: '1px solid #000', paddingBottom: '2px', marginBottom: '3px' }}>
+          <span style={{ flex: 2 }}>Item</span>
+          <span style={{ width: '30px', textAlign: 'center' }}>Qty</span>
+          <span style={{ width: '72px', textAlign: 'right' }}>Total</span>
+        </div>
+        {(inv.items || []).map((item, i) => (
+          <div key={i} style={{ marginBottom: '4px', fontSize: `${fs - 1}px` }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <span style={{ flex: 2, wordBreak: 'break-word', paddingRight: '4px' }}>{item.product_name}</span>
+              <span style={{ width: '30px', textAlign: 'center', flexShrink: 0 }}>{item.quantity}</span>
+              <span style={{ width: '72px', textAlign: 'right', flexShrink: 0 }}>{formatCurrency(item.total_price)}</span>
+            </div>
+            <div style={{ fontSize: `${fs - 2}px`, color: '#555' }}>{formatCurrency(item.unit_price)} x {item.quantity}</div>
+          </div>
+        ))}
+      </div>
+
+      <Dash />
+
+      <div style={{ fontSize: `${fs - 1}px` }}>
+        {cfg.show_subtotal && <TRow label="Subtotal" value={formatCurrency(inv.subtotal)} />}
+        {cfg.show_tax && Number(inv.tax_amount) > 0 && <TRow label="Tax" value={formatCurrency(inv.tax_amount)} />}
+        {cfg.show_discount && Number(inv.discount_amount) > 0 && <TRow label="Discount" value={`-${formatCurrency(inv.discount_amount)}`} />}
+        <div style={{ borderTop: '1px solid #000', marginTop: '4px', paddingTop: '4px', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: `${fs + 1}px` }}>
+          <span>TOTAL</span><span>{formatCurrency(inv.total_amount)}</span>
+        </div>
+        {cfg.show_paid && Number(inv.paid_amount) > 0 && <TRow label="Paid" value={formatCurrency(inv.paid_amount)} />}
+        {cfg.show_balance && Number(inv.balance_due) > 0 && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700 }}>
+            <span>Balance Due</span><span>{formatCurrency(inv.balance_due)}</span>
+          </div>
+        )}
+      </div>
+
+      {cfg.show_notes && inv.notes && (
+        <><Dash /><div style={{ fontSize: `${fs - 1}px`, wordBreak: 'break-word' }}>{inv.notes}</div></>
+      )}
+      {cfg.show_footer && footer && (
+        <><Dash /><div style={{ textAlign: 'center', fontSize: `${fs - 1}px` }}>{footer}</div></>
+      )}
+    </div>
+  );
+}
+
 // ── Renderer ───────────────────────────────────────────────────
 export default function InvoiceRenderer({ invoice, template, logoUrl }) {
   const cfg  = { ...DEFAULT_CONFIG, ...(template?.config || {}) };
   const inv  = invoice || SAMPLE_INVOICE;
   const vars = buildVarMap(inv, cfg);
   const sub  = (text) => substituteVars(text, vars);
+
+  if (cfg.paper_format === 'thermal3inch') {
+    return <ThermalLayout cfg={cfg} inv={inv} sub={sub} />;
+  }
 
   const primary = cfg.primary_color;
   const accent  = cfg.accent_color || '#f9fafb';

@@ -28,6 +28,16 @@ body {
   .no-print { display: none !important; }
 }
 
+@media print {
+  body.print-thermal {
+    margin: 0;
+  }
+  body.print-thermal .print-area {
+    width: 80mm;
+    max-width: 80mm;
+  }
+}
+
 .no-spinner::-webkit-outer-spin-button,
 .no-spinner::-webkit-inner-spin-button {
   -webkit-appearance: none;

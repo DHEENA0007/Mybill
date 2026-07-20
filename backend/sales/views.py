@@ -9,8 +9,8 @@ from django.db.models import Sum, Count
 from .models import Customer, SalesInvoice, InvoiceItem, CreditLog, InvoiceTemplate
 from .serializers import (
     CustomerSerializer, SalesInvoiceSerializer, SalesInvoiceCreateSerializer,
-    SalesInvoiceListSerializer, InvoiceItemSerializer, CreditLogSerializer,
-    InvoiceTemplateSerializer
+    SalesInvoiceUpdateSerializer, SalesInvoiceListSerializer, InvoiceItemSerializer,
+    CreditLogSerializer, InvoiceTemplateSerializer
 )
 
 
@@ -58,8 +58,10 @@ class SalesInvoiceViewSet(TenantViewSet):
     def get_serializer_class(self):
         if self.action == 'list':
             return SalesInvoiceListSerializer
-        if self.action in ['create']:
+        if self.action == 'create':
             return SalesInvoiceCreateSerializer
+        if self.action in ['update', 'partial_update']:
+            return SalesInvoiceUpdateSerializer
         return SalesInvoiceSerializer
 
     def get_queryset(self):
@@ -92,10 +94,34 @@ class SalesInvoiceViewSet(TenantViewSet):
             return Response({'error': 'Cannot update a cancelled invoice.'}, status=status.HTTP_400_BAD_REQUEST)
         return super().update(request, *args, **kwargs)
 
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        instance.total_amount = instance.subtotal + instance.tax_amount - instance.discount_amount
-        instance.update_balance()
+    def destroy(self, request, *args, **kwargs):
+        invoice = self.get_object()
+        from django.db import transaction as db_transaction
+        from inventory.models import StockTransaction
+
+        with db_transaction.atomic():
+            if invoice.status != 'cancelled':
+                for item in invoice.items.all():
+                    item.product.current_stock += item.quantity
+                    item.product.save()
+                    StockTransaction.objects.create(
+                        company=invoice.company,
+                        product=item.product,
+                        transaction_type='return',
+                        quantity=item.quantity,
+                        reference_id=invoice.invoice_number,
+                        notes=f'Invoice {invoice.invoice_number} deleted',
+                    )
+                for credit_log in invoice.credit_logs.all():
+                    if credit_log.customer and credit_log.remaining_balance > 0:
+                        credit_log.customer.credit_balance = max(
+                            credit_log.customer.credit_balance - credit_log.remaining_balance,
+                            Decimal('0'),
+                        )
+                        credit_log.customer.save()
+            invoice.delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=['post'])
     def record_payment(self, request, pk=None):
@@ -278,7 +304,11 @@ class InvoiceTemplateViewSet(TenantViewSet):
     permission_classes = [IsAuthenticated]
 
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user)
+        user = self.request.user
+        kwargs = {'created_by': user}
+        if getattr(user, 'company_id', None) and not getattr(user, 'is_superuser', False):
+            kwargs['company'] = user.company
+        serializer.save(**kwargs)
 
     @action(detail=True, methods=['post'])
     def set_default(self, request, pk=None):
@@ -290,12 +320,12 @@ class InvoiceTemplateViewSet(TenantViewSet):
     @action(detail=False, methods=['get'])
     def default(self, request):
         template_type = request.query_params.get('type', 'nontax')
-        template = InvoiceTemplate.objects.filter(is_default=True, template_type=template_type).first()
+        qs = self.get_queryset()
+        template = qs.filter(is_default=True, template_type=template_type).first()
         if not template:
-            template = InvoiceTemplate.objects.filter(template_type=template_type).first()
+            template = qs.filter(template_type=template_type).first()
         if not template:
-            # Fallback
-            template = InvoiceTemplate.objects.filter(is_default=True).first()
+            template = qs.filter(is_default=True).first()
         if not template:
             return Response(None)
         serializer = self.get_serializer(template)

@@ -157,6 +157,102 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
         return SalesInvoiceSerializer(instance).data
 
 
+class SalesInvoiceUpdateSerializer(serializers.ModelSerializer):
+    items = InvoiceItemCreateSerializer(many=True)
+
+    class Meta:
+        model = SalesInvoice
+        fields = ['customer', 'is_tax_invoice', 'invoice_date', 'discount_amount', 'paid_amount', 'notes', 'items']
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one invoice item is required.")
+        return value
+
+    def update(self, instance, validated_data):
+        from django.db import transaction as db_transaction
+        from inventory.models import StockTransaction
+
+        items_data = validated_data.pop('items')
+
+        with db_transaction.atomic():
+            # Restore stock for all existing items
+            for old_item in instance.items.all():
+                old_item.product.current_stock += old_item.quantity
+                old_item.product.save()
+
+            # Delete existing items
+            instance.items.all().delete()
+
+            # Update invoice header fields
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+
+            # Create new items and deduct stock
+            subtotal = Decimal('0')
+            total_tax = Decimal('0')
+            for item_data in items_data:
+                product = item_data['product']
+                quantity = item_data['quantity']
+                unit_price = Decimal(str(item_data['unit_price']))
+                tax_rate = Decimal(str(item_data.get('tax_rate', 0)))
+
+                if product.current_stock < quantity:
+                    raise serializers.ValidationError(
+                        f"Insufficient stock for {product.name}. Available: {product.current_stock}"
+                    )
+
+                tax_amount = (unit_price * quantity) * (tax_rate / 100)
+                total_price = (unit_price * quantity) + tax_amount
+
+                InvoiceItem.objects.create(
+                    invoice=instance,
+                    product=product,
+                    quantity=quantity,
+                    unit_price=unit_price,
+                    tax_rate=tax_rate,
+                    total_price=total_price,
+                )
+
+                product.current_stock -= quantity
+                product.save()
+
+                StockTransaction.objects.create(
+                    company=instance.company,
+                    product=product,
+                    transaction_type='sale',
+                    quantity=-quantity,
+                    reference_id=instance.invoice_number,
+                    notes=f'Sale invoice {instance.invoice_number} (edited)',
+                )
+
+                subtotal += unit_price * quantity
+                total_tax += tax_amount
+
+            # Recalculate totals
+            discount = Decimal(str(instance.discount_amount or 0))
+            paid = Decimal(str(instance.paid_amount or 0))
+            instance.subtotal = subtotal
+            instance.tax_amount = total_tax
+            instance.total_amount = subtotal + total_tax - discount
+            instance.balance_due = instance.total_amount - paid
+
+            if instance.balance_due <= 0:
+                instance.status = 'paid'
+                instance.balance_due = Decimal('0')
+            elif paid > 0:
+                instance.status = 'partial'
+            else:
+                instance.status = 'pending'
+
+            instance.save()
+
+        return instance
+
+    def to_representation(self, instance):
+        return SalesInvoiceSerializer(instance).data
+
+
 class SalesInvoiceListSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     item_count = serializers.SerializerMethodField()

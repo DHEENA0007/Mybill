@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, Save, Star, Upload, ChevronDown, ChevronUp, Braces, X, Check,
@@ -208,12 +208,13 @@ function PlainField({ label, value, onChange, type = 'text', multiline = false, 
 export default function InvoiceTemplateEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { state: navState } = useLocation();
   const qc = useQueryClient();
   const isEdit = !!id;
   const logoInputRef = useRef();
 
-  const [name, setName] = useState('New Template');
-  const [config, setConfig] = useState({ ...DEFAULT_CONFIG });
+  const [name, setName] = useState(navState?.name || 'New Template');
+  const [config, setConfig] = useState(navState?.preset ? { ...DEFAULT_CONFIG, ...navState.preset } : { ...DEFAULT_CONFIG });
   const [pendingLogo, setPendingLogo] = useState(null);
   const [existingLogoUrl, setExistingLogoUrl] = useState(null);
   const [saved, setSaved] = useState(false);
@@ -298,13 +299,25 @@ export default function InvoiceTemplateEditor() {
         
         <div className="ml-4 flex items-center gap-2 border-l border-gray-200 pl-4">
           <span className="text-sm font-medium text-gray-500">Type:</span>
-          <select 
-            value={config.template_type || 'nontax'} 
+          <select
+            value={config.template_type || 'nontax'}
             onChange={(e) => cfg('template_type', e.target.value)}
             className="border-none bg-transparent text-sm font-medium text-gray-800 focus:ring-0 cursor-pointer outline-none"
           >
             <option value="tax">Tax Invoice</option>
             <option value="nontax">Non-Tax Invoice</option>
+          </select>
+        </div>
+
+        <div className="ml-4 flex items-center gap-2 border-l border-gray-200 pl-4">
+          <span className="text-sm font-medium text-gray-500">Paper:</span>
+          <select
+            value={config.paper_format || 'a4'}
+            onChange={(e) => cfg('paper_format', e.target.value)}
+            className="border-none bg-transparent text-sm font-medium text-gray-800 focus:ring-0 cursor-pointer outline-none"
+          >
+            <option value="a4">A4</option>
+            <option value="thermal3inch">3-Inch Thermal</option>
           </select>
         </div>
 

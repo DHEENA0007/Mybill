@@ -43,7 +43,12 @@ export default function InvoiceDetail() {
     onSuccess: () => { toast.success('Invoice cancelled'); qc.invalidateQueries(['invoice', id]); },
   });
 
-  const handlePrint = () => window.print();
+  const handlePrint = () => {
+    const isThermal = activeTemplate?.config?.paper_format === 'thermal3inch';
+    if (isThermal) document.body.classList.add('print-thermal');
+    window.print();
+    if (isThermal) document.body.classList.remove('print-thermal');
+  };
 
   if (isLoading) return <PageLoader />;
   if (!inv) return <p className="text-gray-500">Invoice not found</p>;

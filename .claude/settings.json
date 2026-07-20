@@ -12,7 +12,8 @@
       "Bash(PGPASSWORD=\"\" psql \"postgresql://neondb_owner:npg_3kLUmgDP7oXu@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39\" -c \"SELECT id, username, email, is_staff, is_superuser, is_active, company_id FROM users WHERE username = 'admin' OR is_superuser = true;\")",
       "Bash(psql 'postgresql://neondb_owner:npg_3kLUmgDP7oXu@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39' -c ' *)",
       "Bash(PGPASSWORD=\"\" psql \"postgresql://neondb_owner:npg_3kLUmgDP7oXu@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39\")",
-      "Bash(PGPASSWORD=\"\" psql \"postgresql://neondb_owner:npg_3kLUmgDP7oXu@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39\" -c \"SELECT id, username, email, is_staff, is_superuser, is_active, company_id FROM users;\")"
+      "Bash(PGPASSWORD=\"\" psql \"postgresql://neondb_owner:npg_3kLUmgDP7oXu@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39\" -c \"SELECT id, username, email, is_staff, is_superuser, is_active, company_id FROM users;\")",
+      "Bash(psql 'postgresql://neondb_owner:npg_qKH45ofNgjLF@ep-plain-union-ao6lg42y-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require&hostaddr=18.138.49.39' -c ' *)"
     ]
   }
 }

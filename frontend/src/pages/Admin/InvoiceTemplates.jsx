@@ -1,15 +1,76 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Trash2, Star, Eye } from 'lucide-react';
+import { Plus, Edit2, Trash2, Star, Eye, FileText, Printer } from 'lucide-react';
 import { getTemplates, deleteTemplate, setDefaultTemplate } from '../../api/templates';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
 import Modal from '../../components/UI/Modal';
 import Badge from '../../components/UI/Badge';
 import ConfirmDialog from '../../components/UI/ConfirmDialog';
-import InvoiceRenderer from '../../components/InvoiceRenderer';
+import InvoiceRenderer, { DEFAULT_CONFIG } from '../../components/InvoiceRenderer';
 import toast from 'react-hot-toast';
+
+const PRESETS = [
+  {
+    key: 'a4',
+    name: 'A4 Standard Invoice',
+    desc: 'Professional full-page layout for A4 paper — logo, customer info, itemised table, summary.',
+    Icon: FileText,
+    color: 'indigo',
+    config: {
+      ...DEFAULT_CONFIG,
+      paper_format: 'a4',
+      primary_color: '#4f46e5',
+      accent_color: '#f9fafb',
+      invoice_title: 'INVOICE',
+      header_align: 'left',
+      show_logo: true,
+      show_customer_section: true,
+      show_invoice_meta: true,
+      show_notes: true,
+      show_footer: true,
+      show_sku: false,
+      show_tax_rate: true,
+      table_striped: true,
+      show_subtotal: true,
+      show_tax: true,
+      show_discount: true,
+      show_paid: true,
+      show_balance: true,
+      footer_text: 'Thank you for your business!',
+    },
+  },
+  {
+    key: 'thermal3inch',
+    name: '3-Inch Thermal Receipt',
+    desc: 'Compact 80mm receipt for thermal printers — monospace, minimal, fast to print.',
+    Icon: Printer,
+    color: 'emerald',
+    config: {
+      ...DEFAULT_CONFIG,
+      paper_format: 'thermal3inch',
+      primary_color: '#000000',
+      font_size_base: 12,
+      show_logo: false,
+      show_customer_section: true,
+      show_invoice_meta: true,
+      show_notes: true,
+      show_footer: true,
+      show_sku: false,
+      show_tax_rate: false,
+      table_striped: false,
+      show_subtotal: true,
+      show_tax: true,
+      show_discount: true,
+      show_paid: true,
+      show_balance: true,
+      invoice_title: 'RECEIPT',
+      footer_text: 'Thank you for your purchase!',
+      footer_align: 'center',
+    },
+  },
+];
 
 export default function InvoiceTemplates() {
   const navigate = useNavigate();
@@ -44,6 +105,39 @@ export default function InvoiceTemplates() {
           New Template
         </Button>
       </div>
+
+      {/* Starter Presets */}
+      <div>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Starter Designs</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {PRESETS.map(preset => {
+            const { Icon } = preset;
+            const colorMap = {
+              indigo: { bg: 'bg-indigo-50', text: 'text-indigo-600', btn: 'bg-indigo-600 hover:bg-indigo-700', border: 'border-indigo-100' },
+              emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', btn: 'bg-emerald-600 hover:bg-emerald-700', border: 'border-emerald-100' },
+            }[preset.color];
+            return (
+              <div key={preset.key} className={`flex items-start gap-4 border ${colorMap.border} rounded-xl p-4 bg-white`}>
+                <div className={`w-10 h-10 rounded-xl ${colorMap.bg} flex items-center justify-center flex-shrink-0`}>
+                  <Icon className={`w-5 h-5 ${colorMap.text}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-800 text-sm">{preset.name}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{preset.desc}</p>
+                </div>
+                <button
+                  onClick={() => navigate('/admin/invoice-templates/new', { state: { preset: preset.config, name: preset.name } })}
+                  className={`flex-shrink-0 text-xs font-semibold text-white px-3 py-1.5 rounded-lg transition-colors ${colorMap.btn}`}
+                >
+                  Use Design
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100" />
 
       {isLoading ? (
         <div className="text-center py-16 text-sm text-gray-400">Loading templates…</div>
