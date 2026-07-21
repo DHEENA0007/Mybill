@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Banknote, Search, Filter, CheckCircle2, AlertCircle, User } from 'lucide-react';
 import { getCreditLogs, getCreditLogSummary, settleCreditLog, getCustomersWithCredit } from '../../api/invoices';
@@ -19,25 +19,51 @@ export default function CreditLog() {
   const [settleForm, setSettleForm] = useState({ amount: '', payment_method: 'cash', notes: '' });
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | pending | settled
+  const [filterMonth, setFilterMonth] = useState(''); // YYYY-MM
   const qc = useQueryClient();
 
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthVal = String(d.getMonth() + 1).padStart(2, '0');
+      const yearVal = String(d.getFullYear());
+      options.push({
+        value: `${yearVal}-${monthVal}`,
+        label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
+      });
+    }
+    return options;
+  }, []);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['credit-logs', filterCustomer, filterStatus],
+    queryKey: ['credit-logs', filterCustomer, filterStatus, filterMonth],
     queryFn: () => {
       const params = {};
       if (filterCustomer) params.customer = filterCustomer;
       if (filterStatus === 'pending') params.has_balance = 'true';
+      if (filterMonth) {
+        const [year, month] = filterMonth.split('-');
+        params.year = year;
+        params.month = parseInt(month, 10).toString();
+      }
       return getCreditLogs(params).then(r => r.data);
     },
   });
 
   const { data: summary } = useQuery({
-    queryKey: ['credit-logs-summary', filterCustomer, filterStatus],
+    queryKey: ['credit-logs-summary', filterCustomer, filterStatus, filterMonth],
     queryFn: () => {
       const params = {};
       if (filterCustomer) params.customer = filterCustomer;
       if (filterStatus === 'pending') params.has_balance = 'true';
       if (filterStatus === 'settled') params.status = 'settled';
+      if (filterMonth) {
+        const [year, month] = filterMonth.split('-');
+        params.year = year;
+        params.month = parseInt(month, 10).toString();
+      }
       return getCreditLogSummary(params).then(r => r.data);
     },
   });
@@ -179,6 +205,16 @@ export default function CreditLog() {
           <option value="">All Customers</option>
           {(customersWithCredit || []).map(c => (
             <option key={c.id} value={c.id}>{c.name} ({formatCurrency(c.credit_balance)})</option>
+          ))}
+        </select>
+        <select
+          value={filterMonth}
+          onChange={(e) => setFilterMonth(e.target.value)}
+          className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        >
+          <option value="">All Months</option>
+          {monthOptions.map(m => (
+            <option key={m.value} value={m.value}>{m.label}</option>
           ))}
         </select>
       </div>

@@ -64,6 +64,16 @@ class Customer(models.Model):
     def __str__(self):
         return self.name
 
+    def update_credit_balance(self):
+        from .models import CreditLog
+        total_remaining = CreditLog.objects.filter(
+            customer=self
+        ).exclude(invoice__status='cancelled').aggregate(
+            total=models.Sum('remaining_balance')
+        )['total'] or 0
+        self.credit_balance = total_remaining
+        self.save(update_fields=['credit_balance'])
+
 
 class SalesInvoice(models.Model):
     company = models.ForeignKey('users.Company', on_delete=models.CASCADE, null=True, blank=True)
@@ -105,6 +115,40 @@ class SalesInvoice(models.Model):
         if not self.invoice_number:
             self.invoice_number = generate_invoice_number(self.is_tax_invoice)
         super().save(*args, **kwargs)
+        
+        # Sync CreditLog and update customer balance
+        if self.customer:
+            from .models import CreditLog
+            from decimal import Decimal
+            if self.status == 'cancelled':
+                self.credit_logs.all().delete()
+            elif self.balance_due > 0:
+                credit_log, created = CreditLog.objects.get_or_create(
+                    invoice=self,
+                    defaults={
+                        'company': self.company,
+                        'customer': self.customer,
+                        'credit_amount': self.balance_due,
+                        'paid_amount': Decimal('0'),
+                        'remaining_balance': self.balance_due,
+                    }
+                )
+                if not created:
+                    credit_log.customer = self.customer
+                    credit_log.credit_amount = self.balance_due + credit_log.paid_amount
+                    credit_log.remaining_balance = self.balance_due
+                    credit_log.save()
+            else:
+                credit_log = self.credit_logs.first()
+                if credit_log:
+                    credit_log.customer = self.customer
+                    credit_log.remaining_balance = Decimal('0')
+                    credit_log.paid_amount = credit_log.credit_amount
+                    credit_log.save()
+
+    def delete(self, *args, **kwargs):
+        self.credit_logs.all().delete()
+        super().delete(*args, **kwargs)
 
     def update_balance(self):
         self.balance_due = self.total_amount - self.paid_amount
@@ -186,3 +230,22 @@ class CreditLog(models.Model):
 
     def __str__(self):
         return f"{self.customer.name} | Credit: {self.credit_amount} | Remaining: {self.remaining_balance}"
+
+    def save(self, *args, **kwargs):
+        old_customer = None
+        if self.pk:
+            try:
+                old_customer = CreditLog.objects.get(pk=self.pk).customer
+            except CreditLog.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
+        if self.customer:
+            self.customer.update_credit_balance()
+        if old_customer and old_customer != self.customer:
+            old_customer.update_credit_balance()
+
+    def delete(self, *args, **kwargs):
+        customer = self.customer
+        super().delete(*args, **kwargs)
+        if customer:
+            customer.update_credit_balance()

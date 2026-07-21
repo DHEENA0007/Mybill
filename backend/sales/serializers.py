@@ -137,19 +137,6 @@ class SalesInvoiceCreateSerializer(serializers.ModelSerializer):
                 invoice.status = 'pending'
             invoice.save()
 
-            # Auto-create CreditLog when customer owes a balance
-            if invoice.balance_due > 0 and invoice.customer:
-                CreditLog.objects.create(
-                    company=invoice.company,
-                    customer=invoice.customer,
-                    invoice=invoice,
-                    credit_amount=invoice.balance_due,
-                    paid_amount=0,
-                    remaining_balance=invoice.balance_due,
-                )
-                # Update customer credit_balance
-                invoice.customer.credit_balance += invoice.balance_due
-                invoice.customer.save()
 
         return invoice
 

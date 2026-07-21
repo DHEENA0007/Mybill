@@ -204,10 +204,25 @@ class CreditLogViewSet(TenantViewSet):
         queryset = super().get_queryset().exclude(invoice__status='cancelled')
         customer = self.request.query_params.get('customer')
         has_balance = self.request.query_params.get('has_balance')
+        year = self.request.query_params.get('year')
+        month = self.request.query_params.get('month')
+
         if customer:
             queryset = queryset.filter(customer_id=customer)
         if has_balance and has_balance.lower() == 'true':
             queryset = queryset.filter(remaining_balance__gt=0)
+        if year:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(invoice__invoice_date__year=year) |
+                Q(invoice__isnull=True, created_at__year=year)
+            )
+        if month:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(invoice__invoice_date__month=month) |
+                Q(invoice__isnull=True, created_at__month=month)
+            )
         return queryset
 
     @action(detail=True, methods=['post'])

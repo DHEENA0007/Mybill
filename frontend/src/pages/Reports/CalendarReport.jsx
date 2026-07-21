@@ -78,11 +78,14 @@ export default function CalendarReport() {
   const monthStats = useMemo(() => {
     let total = 0, count = 0, activeDays = 0;
     Object.values(groupedByDate).forEach(items => {
-      activeDays++;
-      items.forEach(item => {
-        total += parseFloat(item.total_amount || item.grand_total || 0);
-        count++;
-      });
+      const activeItems = items.filter(item => item.status !== 'cancelled');
+      if (activeItems.length > 0) {
+        activeDays++;
+        activeItems.forEach(item => {
+          total += parseFloat(item.total_amount || item.grand_total || 0);
+          count++;
+        });
+      }
     });
     return { total, count, activeDays };
   }, [groupedByDate]);
@@ -90,7 +93,8 @@ export default function CalendarReport() {
   const cells = getMonthCells(year, month);
   const todayStr = toDateStr(today.getFullYear(), today.getMonth(), today.getDate());
   const selectedItems = selectedDate ? (groupedByDate[selectedDate] || []) : [];
-  const selectedTotal = selectedItems.reduce(
+  const activeSelectedItems = selectedItems.filter(item => item.status !== 'cancelled');
+  const selectedTotal = activeSelectedItems.reduce(
     (s, item) => s + parseFloat(item.total_amount || item.grand_total || 0), 0
   );
 
@@ -215,10 +219,12 @@ export default function CalendarReport() {
 
               const dateStr = toDateStr(year, month, day);
               const dayItems = groupedByDate[dateStr] || [];
-              const total = dayItems.reduce((s, i) => s + parseFloat(i.total_amount || i.grand_total || 0), 0);
+              const activeDayItems = dayItems.filter(i => i.status !== 'cancelled');
+              const total = activeDayItems.reduce((s, i) => s + parseFloat(i.total_amount || i.grand_total || 0), 0);
               const isToday = dateStr === todayStr;
               const isSelected = dateStr === selectedDate;
               const hasData = dayItems.length > 0;
+              const hasActiveData = activeDayItems.length > 0;
               const isWeekend = (idx % 7) === 0 || (idx % 7) === 6;
 
               return (
@@ -253,13 +259,13 @@ export default function CalendarReport() {
                   </div>
 
                   {/* Data badge */}
-                  {hasData && (
+                  {hasActiveData && (
                     <div className="mt-auto space-y-0.5">
                       <div className={`text-xs font-bold rounded-lg px-1.5 py-0.5 text-center truncate ${accentClasses.badge}`}>
                         {formatCurrency(total)}
                       </div>
                       <p className="text-xs text-gray-400 text-center">
-                        {dayItems.length} {dayItems.length === 1 ? 'entry' : 'entries'}
+                        {activeDayItems.length} {activeDayItems.length === 1 ? 'entry' : 'entries'}
                       </p>
                     </div>
                   )}
@@ -360,7 +366,7 @@ export default function CalendarReport() {
               <div className={`p-3 border-t border-gray-100 ${accentClasses.bgLight}`}>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-gray-500">
-                    {selectedItems.length} transaction{selectedItems.length !== 1 ? 's' : ''}
+                    {activeSelectedItems.length} active transaction{activeSelectedItems.length !== 1 ? 's' : ''}
                   </span>
                   <span className={`text-sm font-bold ${accentClasses.textDark}`}>
                     {formatCurrency(selectedTotal)}
