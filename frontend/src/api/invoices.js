@@ -10,5 +10,6 @@ export const cancelInvoice = (id) => api.post(`/invoices/${id}/cancel/`);
 export const recordInvoicePayment = (id, data) => api.post(`/invoices/${id}/record_payment/`, data);
 export const getCreditLogs = (params) => api.get('/credit-logs/', { params });
 export const getCreditLogSummary = (params) => api.get('/credit-logs/summary/', { params });
+export const downloadCreditLogPDF = (params) => api.get('/credit-logs/download_pdf/', { params, responseType: 'blob' });
 export const settleCreditLog = (id, data) => api.post(`/credit-logs/${id}/settle/`, data);
 export const getCustomersWithCredit = () => api.get('/credit-logs/customers_with_credit/');

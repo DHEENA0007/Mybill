@@ -334,6 +334,188 @@ class CreditLogViewSet(TenantViewSet):
         ]
         return Response(data)
 
+    @action(detail=False, methods=['get'])
+    def download_pdf(self, request):
+        """Generate and return a PDF report of credit logs in a date range."""
+        from django.http import HttpResponse
+        from django.db.models import Q, Sum
+        from fpdf import FPDF
+        from datetime import datetime
+        
+        date_from_str = request.query_params.get('date_from')
+        date_to_str = request.query_params.get('date_to')
+        customer_id = request.query_params.get('customer')
+        status_filter = request.query_params.get('status')
+        
+        queryset = self.get_queryset()
+        
+        # Apply date filters
+        if date_from_str:
+            queryset = queryset.filter(
+                Q(invoice__invoice_date__gte=date_from_str) | 
+                Q(invoice__isnull=True, created_at__date__gte=date_from_str)
+            )
+        if date_to_str:
+            queryset = queryset.filter(
+                Q(invoice__invoice_date__lte=date_to_str) | 
+                Q(invoice__isnull=True, created_at__date__lte=date_to_str)
+            )
+        
+        # Status filtering
+        if status_filter == 'settled':
+            queryset = queryset.filter(remaining_balance__lte=0)
+        elif status_filter == 'pending':
+            queryset = queryset.filter(remaining_balance__gt=0)
+            
+        logs = queryset.select_related('customer', 'invoice').order_by('-created_at')
+        
+        # Calculate summary totals
+        totals = logs.aggregate(
+            total_credit=Sum('credit_amount'),
+            total_paid=Sum('paid_amount'),
+            total_remaining=Sum('remaining_balance'),
+        )
+        t_credit = totals['total_credit'] or 0
+        t_paid = totals['total_paid'] or 0
+        t_remaining = totals['total_remaining'] or 0
+        
+        # Generate FPDF
+        class CreditReportPDF(FPDF):
+            def header(self):
+                self.set_fill_color(30, 41, 59) # Dark Slate Navy
+                self.rect(0, 0, 210, 35, 'F')
+                self.set_text_color(255, 255, 255)
+                self.set_font('Helvetica', 'B', 15)
+                self.cell(0, 12, 'CREDIT LOG SUMMARY REPORT', new_x="LMARGIN", new_y="NEXT", align='C')
+                self.set_font('Helvetica', 'I', 9)
+                self.cell(0, 4, f'Generated on: {datetime.now().strftime("%d %B %Y %I:%M %p")}', new_x="LMARGIN", new_y="NEXT", align='C')
+                self.ln(12)
+
+            def footer(self):
+                self.set_y(-15)
+                self.set_font('Helvetica', 'I', 8)
+                self.set_text_color(128, 128, 128)
+                self.cell(0, 10, f'Page {self.page_no()}/{{nb}}', align='C')
+
+        pdf = CreditReportPDF()
+        pdf.alias_nb_pages()
+        pdf.add_page()
+        pdf.set_margins(10, 10, 10)
+        
+        # Subheader Information
+        pdf.set_text_color(30, 41, 59)
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(30, 6, 'Date Range:')
+        pdf.set_font('Helvetica', '')
+        range_str = "All Time"
+        if date_from_str and date_to_str:
+            range_str = f"{date_from_str} to {date_to_str}"
+        elif date_from_str:
+            range_str = f"From {date_from_str}"
+        elif date_to_str:
+            range_str = f"Until {date_to_str}"
+        pdf.cell(70, 6, range_str)
+        
+        pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(30, 6, 'Status Filter:')
+        pdf.set_font('Helvetica', '')
+        pdf.cell(0, 6, (status_filter or 'All').capitalize(), new_x="LMARGIN", new_y="NEXT")
+        
+        # Display selected customer if applicable
+        if customer_id:
+            try:
+                from sales.models import Customer
+                cust = Customer.objects.get(id=customer_id)
+                pdf.set_font('Helvetica', 'B', 10)
+                pdf.cell(30, 6, 'Customer:')
+                pdf.set_font('Helvetica', '')
+                pdf.cell(0, 6, cust.name, new_x="LMARGIN", new_y="NEXT")
+            except Exception:
+                pass
+        pdf.ln(5)
+        
+        # Summary totals table
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Summary Totals', new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+        
+        pdf.set_font('Helvetica', 'B', 9)
+        pdf.set_fill_color(241, 245, 249)
+        pdf.cell(63, 7, 'Total Credit Given', border=1, fill=True, align='C')
+        pdf.cell(63, 7, 'Total Collected', border=1, fill=True, align='C')
+        pdf.cell(64, 7, 'Outstanding Balance', border=1, fill=True, align='C', new_x="LMARGIN", new_y="NEXT")
+        
+        pdf.set_font('Helvetica', '', 10)
+        pdf.cell(63, 8, f'INR {t_credit:,.2f}', border=1, align='C')
+        pdf.cell(63, 8, f'INR {t_paid:,.2f}', border=1, align='C')
+        
+        if t_remaining > 0:
+            pdf.set_text_color(220, 38, 38)
+            pdf.set_font('Helvetica', 'B', 10)
+        pdf.cell(64, 8, f'INR {t_remaining:,.2f}', border=1, align='C', new_x="LMARGIN", new_y="NEXT")
+        pdf.set_text_color(30, 41, 59)
+        pdf.set_font('Helvetica', '', 9)
+        pdf.ln(8)
+        
+        # Detailed Credit Logs Table
+        pdf.set_font('Helvetica', 'B', 11)
+        pdf.cell(0, 8, 'Detailed Transaction Log', new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(2)
+        
+        pdf.set_font('Helvetica', 'B', 8)
+        pdf.set_fill_color(30, 41, 59)
+        pdf.set_text_color(255, 255, 255)
+        pdf.cell(20, 7, 'Date', border=1, fill=True, align='C')
+        pdf.cell(22, 7, 'Invoice #', border=1, fill=True, align='C')
+        pdf.cell(54, 7, 'Customer', border=1, fill=True, align='L')
+        pdf.cell(30, 7, 'Credit Amount', border=1, fill=True, align='R')
+        pdf.cell(30, 7, 'Paid Amount', border=1, fill=True, align='R')
+        pdf.cell(34, 7, 'Remaining Balance', border=1, fill=True, align='R', new_x="LMARGIN", new_y="NEXT")
+        
+        pdf.set_text_color(30, 41, 59)
+        pdf.set_font('Helvetica', '', 8)
+        
+        for idx, log in enumerate(logs):
+            fill = idx % 2 == 1
+            pdf.set_fill_color(248, 250, 252)
+            
+            # Check page break
+            if pdf.get_y() > 265:
+                pdf.add_page()
+                pdf.set_font('Helvetica', 'B', 8)
+                pdf.set_fill_color(30, 41, 59)
+                pdf.set_text_color(255, 255, 255)
+                pdf.cell(20, 7, 'Date', border=1, fill=True, align='C')
+                pdf.cell(22, 7, 'Invoice #', border=1, fill=True, align='C')
+                pdf.cell(54, 7, 'Customer', border=1, fill=True, align='L')
+                pdf.cell(30, 7, 'Credit Amount', border=1, fill=True, align='R')
+                pdf.cell(30, 7, 'Paid Amount', border=1, fill=True, align='R')
+                pdf.cell(34, 7, 'Remaining Balance', border=1, fill=True, align='R', new_x="LMARGIN", new_y="NEXT")
+                pdf.set_text_color(30, 41, 59)
+                pdf.set_font('Helvetica', '', 8)
+                
+            log_date = log.invoice.invoice_date if log.invoice else log.created_at.date()
+            inv_num = log.invoice.invoice_number if log.invoice else 'N/A'
+            cust_name = log.customer.name
+            if len(cust_name) > 28:
+                cust_name = cust_name[:25] + '...'
+                
+            pdf.cell(20, 7, log_date.strftime('%d-%b-%y'), border=1, fill=fill, align='C')
+            pdf.cell(22, 7, inv_num, border=1, fill=fill, align='C')
+            pdf.cell(54, 7, cust_name, border=1, fill=fill, align='L')
+            pdf.cell(30, 7, f'{log.credit_amount:,.2f}', border=1, fill=fill, align='R')
+            pdf.cell(30, 7, f'{log.paid_amount:,.2f}', border=1, fill=fill, align='R')
+            
+            if log.remaining_balance > 0:
+                pdf.set_text_color(220, 38, 38)
+            pdf.cell(34, 7, f'{log.remaining_balance:,.2f}', border=1, fill=fill, align='R', new_x="LMARGIN", new_y="NEXT")
+            pdf.set_text_color(30, 41, 59)
+            
+        pdf_content = pdf.output()
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="credit_report_{date_from_str}_to_{date_to_str}.pdf"'
+        return response
+
 
 class InvoiceTemplateViewSet(TenantViewSet):
     queryset = InvoiceTemplate.objects.all()

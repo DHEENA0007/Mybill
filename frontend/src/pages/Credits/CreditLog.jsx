@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Banknote, Search, Filter, CheckCircle2, AlertCircle, User } from 'lucide-react';
-import { getCreditLogs, getCreditLogSummary, settleCreditLog, getCustomersWithCredit } from '../../api/invoices';
+import { getCreditLogs, getCreditLogSummary, settleCreditLog, getCustomersWithCredit, downloadCreditLogPDF } from '../../api/invoices';
 import { getCustomers } from '../../api/customers';
 import Card from '../../components/UI/Card';
 import Table from '../../components/UI/Table';
@@ -20,7 +20,45 @@ export default function CreditLog() {
   const [filterCustomer, setFilterCustomer] = useState('');
   const [filterStatus, setFilterStatus] = useState('all'); // all | pending | settled
   const [filterMonth, setFilterMonth] = useState(''); // YYYY-MM
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
+  const [generatingReport, setGeneratingReport] = useState(false);
   const qc = useQueryClient();
+
+  const handleGenerateReport = async (e) => {
+    e.preventDefault();
+    if (!dateRange.startDate || !dateRange.endDate) {
+      toast.error('Please select both start and end dates.');
+      return;
+    }
+    setGeneratingReport(true);
+    try {
+      const response = await downloadCreditLogPDF({
+        date_from: dateRange.startDate,
+        date_to: dateRange.endDate,
+        customer: filterCustomer,
+        status: filterStatus
+      });
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `credit_report_${dateRange.startDate}_to_${dateRange.endDate}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      setReportModalOpen(false);
+      toast.success('Report generated successfully!');
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to generate report.');
+    } finally {
+      setGeneratingReport(false);
+    }
+  };
 
   const monthOptions = useMemo(() => {
     const options = [];
@@ -161,6 +199,14 @@ export default function CreditLog() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Credit Log</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track and collect outstanding customer credit</p>
+        </div>
+        <div>
+          <Button
+            variant="outline"
+            onClick={() => setReportModalOpen(true)}
+          >
+            Generate Report
+          </Button>
         </div>
       </div>
 
@@ -309,6 +355,37 @@ export default function CreditLog() {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Report Date Range Modal */}
+      <Modal isOpen={reportModalOpen} onClose={() => setReportModalOpen(false)} title="Generate Credit Report">
+        <form onSubmit={handleGenerateReport} className="space-y-4">
+          <p className="text-sm text-gray-500">
+            Select a date range to generate a PDF report for the credit logs matching your current filters.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Date"
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange(d => ({ ...d, startDate: e.target.value }))}
+              required
+            />
+            <Input
+              label="End Date"
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange(d => ({ ...d, endDate: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" type="button" onClick={() => setReportModalOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={generatingReport}>
+              Generate PDF
+            </Button>
+          </div>
+        </form>
       </Modal>
     </div>
   );
