@@ -70,6 +70,8 @@ class SalesInvoiceViewSet(TenantViewSet):
         customer = self.request.query_params.get('customer')
         date_from = self.request.query_params.get('date_from')
         date_to = self.request.query_params.get('date_to')
+        year = self.request.query_params.get('year')
+        month = self.request.query_params.get('month')
 
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -79,7 +81,27 @@ class SalesInvoiceViewSet(TenantViewSet):
             queryset = queryset.filter(invoice_date__gte=date_from)
         if date_to:
             queryset = queryset.filter(invoice_date__lte=date_to)
+        if year:
+            queryset = queryset.filter(invoice_date__year=year)
+        if month:
+            queryset = queryset.filter(invoice_date__month=month)
         return queryset
+
+    @action(detail=False, methods=['get'])
+    def summary(self, request):
+        """Return aggregate totals across ALL invoices matching current filters."""
+        from django.db.models import Sum
+        queryset = self.filter_queryset(self.get_queryset()).exclude(status='cancelled')
+        totals = queryset.aggregate(
+            total_invoiced=Sum('total_amount'),
+            total_collected=Sum('paid_amount'),
+            total_outstanding=Sum('balance_due'),
+        )
+        return Response({
+            'total_invoiced': totals['total_invoiced'] or 0,
+            'total_collected': totals['total_collected'] or 0,
+            'total_outstanding': totals['total_outstanding'] or 0,
+        })
 
     def perform_create(self, serializer):
         user = self.request.user

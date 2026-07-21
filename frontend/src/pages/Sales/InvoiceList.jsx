@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Pencil } from 'lucide-react';
-import { getInvoices } from '../../api/invoices';
+import { getInvoices, getInvoiceSummary } from '../../api/invoices';
 import usePermission from '../../hooks/usePermission';
 import Card from '../../components/UI/Card';
 import Button from '../../components/UI/Button';
@@ -17,13 +17,44 @@ export default function InvoiceList() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
+  const [filterMonth, setFilterMonth] = useState(''); // YYYY-MM
   const navigate = useNavigate();
   const { invoiceStatuses } = useChoices();
   const { can } = usePermission();
 
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthVal = String(d.getMonth() + 1).padStart(2, '0');
+      const yearVal = String(d.getFullYear());
+      options.push({
+        value: `${yearVal}-${monthVal}`,
+        label: d.toLocaleString('default', { month: 'long', year: 'numeric' })
+      });
+    }
+    return options;
+  }, []);
+
+  const monthParams = useMemo(() => {
+    const params = {};
+    if (filterMonth) {
+      const [year, month] = filterMonth.split('-');
+      params.year = year;
+      params.month = parseInt(month, 10).toString();
+    }
+    return params;
+  }, [filterMonth]);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['invoices', { search, page, status }],
-    queryFn: () => getInvoices({ search, page, status }).then(r => r.data),
+    queryKey: ['invoices', { search, page, status, filterMonth }],
+    queryFn: () => getInvoices({ search, page, status, ...monthParams }).then(r => r.data),
+  });
+
+  const { data: summary } = useQuery({
+    queryKey: ['invoices-summary', { search, status, filterMonth }],
+    queryFn: () => getInvoiceSummary({ search, status, ...monthParams }).then(r => r.data),
   });
 
   const columns = [
@@ -46,6 +77,22 @@ export default function InvoiceList() {
 
   return (
     <div className="space-y-4">
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+          <p className="text-xs text-gray-500 font-medium">Total Invoiced</p>
+          <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(summary?.total_invoiced || 0)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-emerald-100 p-4 shadow-sm">
+          <p className="text-xs text-gray-500 font-medium">Total Collected</p>
+          <p className="text-xl font-bold text-emerald-600 mt-1">{formatCurrency(summary?.total_collected || 0)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-red-100 p-4 shadow-sm">
+          <p className="text-xs text-gray-500 font-medium">Outstanding Balance</p>
+          <p className="text-xl font-bold text-red-600 mt-1">{formatCurrency(summary?.total_outstanding || 0)}</p>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <SearchBar value={search} onChange={(v) => { setSearch(v); setPage(1); }} placeholder="Search invoices..." className="max-w-sm" />
@@ -53,6 +100,16 @@ export default function InvoiceList() {
             <option value="">All Status</option>
             {invoiceStatuses.map(({ value, label }) => (
               <option key={value} value={value}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={filterMonth}
+            onChange={(e) => { setFilterMonth(e.target.value); setPage(1); }}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">All Months</option>
+            {monthOptions.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
         </div>
