@@ -358,7 +358,7 @@ export default function CreditLog() {
       </Modal>
 
       {/* Report Date Range Modal */}
-      <Modal isOpen={reportModalOpen} onClose={() => setReportModalOpen(false)} title="Generate Credit Report">
+      <Modal open={reportModalOpen} onClose={() => setReportModalOpen(false)} title="Generate Credit Report">
         <form onSubmit={handleGenerateReport} className="space-y-4">
           <p className="text-sm text-gray-500">
             Select a date range to generate a PDF report for the credit logs matching your current filters.
