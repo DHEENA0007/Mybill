@@ -29,6 +29,8 @@ import SalesReport from './pages/Reports/SalesReport';
 import InventoryReport from './pages/Reports/InventoryReport';
 import FinancialReport from './pages/Reports/FinancialReport';
 import CalendarReport from './pages/Reports/CalendarReport';
+import CustomerReport from './pages/Reports/CustomerReport';
+import DailyCreditReport from './pages/Reports/DailyCreditReport';
 import UserManagement from './pages/Admin/UserManagement';
 import RoleManagement from './pages/Admin/RoleManagement';
 import InvoiceTemplates from './pages/Admin/InvoiceTemplates';
@@ -140,6 +142,8 @@ export default function App() {
             <Route path="reports/inventory" element={<InventoryReport />} />
             <Route path="reports/financial" element={<FinancialReport />} />
             <Route path="reports/calendar" element={<CalendarReport />} />
+            <Route path="reports/customers" element={<CustomerReport />} />
+            <Route path="reports/daily-credit" element={<DailyCreditReport />} />
             <Route path="expenses" element={<InventoryExpenses />} />
             <Route path="expense-categories" element={<InventoryExpenseSettings />} />
             <Route path="incomes" element={<InventoryIncomes />} />

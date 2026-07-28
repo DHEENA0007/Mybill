@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Banknote, Search, Filter, CheckCircle2, AlertCircle, User } from 'lucide-react';
+import { Banknote, CheckCircle2, AlertCircle, User, Printer } from 'lucide-react';
 import { getCreditLogs, getCreditLogSummary, settleCreditLog, getCustomersWithCredit, downloadCreditLogPDF } from '../../api/invoices';
 import { getCustomers } from '../../api/customers';
 import Card from '../../components/UI/Card';
@@ -12,6 +12,34 @@ import Select from '../../components/UI/Select';
 import Badge from '../../components/UI/Badge';
 import { formatCurrency, formatDate } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+
+const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+const PRINT_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; font-size: 12px; color: #111; padding: 24px; }
+  h1 { font-size: 20px; font-weight: bold; color: #1e1b4b; }
+  .meta { color: #6b7280; font-size: 11px; margin-top: 3px; margin-bottom: 20px; }
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+  .stat { border: 1px solid #e0e7ff; background: #f5f3ff; border-radius: 8px; padding: 10px 14px; }
+  .stat-label { font-size: 9px; color: #6b7280; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; }
+  .stat-value { font-size: 16px; font-weight: bold; margin-top: 3px; color: #1e1b4b; }
+  .stat-value.green { color: #059669; }
+  .stat-value.red { color: #dc2626; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  thead th { background: #f9fafb; padding: 6px 8px; text-align: left; font-size: 9px; color: #6b7280; font-weight: 700; border-bottom: 2px solid #e5e7eb; text-transform: uppercase; letter-spacing: 0.04em; }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; }
+  .mono { font-family: monospace; background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 10px; }
+  .td-right { text-align: right; }
+  .badge-pending { display:inline-block; padding:1px 7px; border-radius:9999px; font-size:9px; font-weight:600; background:#fee2e2; color:#dc2626; }
+  .badge-settled { display:inline-block; padding:1px 7px; border-radius:9999px; font-size:9px; font-weight:600; background:#d1fae5; color:#059669; }
+  .td-amount { text-align:right; }
+  .td-paid { text-align:right; color:#059669; font-weight:600; }
+  .td-balance-due { text-align:right; color:#dc2626; font-weight:700; }
+  .td-balance-ok  { text-align:right; color:#059669; font-weight:600; }
+  tfoot td { background:#f5f3ff; font-weight:bold; color:#1e1b4b; border-top:2px solid #c7d2fe; padding:7px 8px; }
+  @page { margin: 15mm; }
+`;
 
 export default function CreditLog() {
   const [settleOpen, setSettleOpen] = useState(false);
@@ -111,6 +139,24 @@ export default function CreditLog() {
     queryFn: () => getCustomersWithCredit().then(r => r.data),
   });
 
+  // Fetch all pending credits (no filters) so we can compute the real
+  // per-customer outstanding balance — the credit_balance on customersWithCredit
+  // can be stale/wrong depending on the backend calculation.
+  const { data: allPendingData } = useQuery({
+    queryKey: ['all-pending-credits-balances'],
+    queryFn: () => getCreditLogs({ has_balance: 'true', page_size: 1000 }).then(r => r.data),
+  });
+
+  const custBalanceMap = useMemo(() => {
+    const items = allPendingData?.results ?? (Array.isArray(allPendingData) ? allPendingData : []);
+    const map = {};
+    items.forEach(c => {
+      const key = String(c.customer);
+      map[key] = (map[key] || 0) + parseFloat(c.remaining_balance || 0);
+    });
+    return map;
+  }, [allPendingData]);
+
   const settleMut = useMutation({
     mutationFn: ({ id, data }) => settleCreditLog(id, data),
     onSuccess: () => {
@@ -138,6 +184,97 @@ export default function CreditLog() {
   const handleSettle = (e) => {
     e.preventDefault();
     settleMut.mutate({ id: selectedCredit.id, data: settleForm });
+  };
+
+  const handlePrint = () => {
+    const rows = credits;
+    if (rows.length === 0) return;
+
+    const filterParts = [];
+    if (filterStatus !== 'all') filterParts.push(filterStatus.charAt(0).toUpperCase() + filterStatus.slice(1));
+    const custName = (customersWithCredit || []).find(c => String(c.id) === String(filterCustomer))?.name;
+    if (custName) filterParts.push(`Customer: ${custName}`);
+    if (filterMonth) {
+      const [y, m] = filterMonth.split('-');
+      filterParts.push(new Date(y, parseInt(m) - 1).toLocaleString('default', { month: 'long', year: 'numeric' }));
+    }
+    const filterLabel = filterParts.length ? filterParts.join(' · ') : 'All Records';
+
+    const tRows = rows.map((c, i) => {
+      const settled = parseFloat(c.remaining_balance) <= 0;
+      return `
+        <tr>
+          <td style="color:#9ca3af;font-family:monospace">${i + 1}</td>
+          <td style="font-weight:600">${esc(c.customer_name)}</td>
+          <td><span class="mono">${esc(c.invoice_number || '—')}</span></td>
+          <td class="td-amount">${esc(formatCurrency(c.credit_amount))}</td>
+          <td class="td-paid">${esc(formatCurrency(c.paid_amount))}</td>
+          <td class="${settled ? 'td-balance-ok' : 'td-balance-due'}">
+            ${settled ? '✓ Settled' : esc(formatCurrency(c.remaining_balance))}
+          </td>
+          <td>${esc(formatDate(c.created_at))}</td>
+          <td><span class="${settled ? 'badge-settled' : 'badge-pending'}">${settled ? 'Settled' : 'Pending'}</span></td>
+        </tr>`;
+    }).join('');
+
+    const body = `
+      <h1>Credit Log</h1>
+      <div class="meta">
+        Filter: ${esc(filterLabel)} &nbsp;·&nbsp;
+        ${rows.length} record${rows.length !== 1 ? 's' : ''}
+        &nbsp;·&nbsp; Printed ${new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
+      </div>
+      <div class="summary-grid">
+        <div class="stat">
+          <div class="stat-label">Total Credit Given</div>
+          <div class="stat-value">${esc(formatCurrency(totalCredit))}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Total Collected</div>
+          <div class="stat-value green">${esc(formatCurrency(totalPaid))}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Outstanding Balance</div>
+          <div class="stat-value red">${esc(formatCurrency(totalRemaining))}</div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:28px">#</th>
+            <th>Customer</th>
+            <th>Invoice</th>
+            <th class="td-right">Credit Given</th>
+            <th class="td-right">Paid</th>
+            <th class="td-right">Balance</th>
+            <th>Date</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>${tRows}</tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3">Total (${rows.length} records)</td>
+            <td class="td-right">${esc(formatCurrency(totalCredit))}</td>
+            <td class="td-right" style="color:#059669">${esc(formatCurrency(totalPaid))}</td>
+            <td class="td-right" style="color:#dc2626">${esc(formatCurrency(totalRemaining))}</td>
+            <td colspan="2"></td>
+          </tr>
+        </tfoot>
+      </table>`;
+
+    const win = window.open('', '_blank', 'width=980,height=720');
+    win.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Credit Log — ${esc(filterLabel)}</title>
+  <style>${PRINT_CSS}</style>
+</head>
+<body>${body}</body>
+</html>`);
+    win.document.close();
+    setTimeout(() => { win.focus(); win.print(); }, 500);
   };
 
   const allCredits = data?.results || data || [];
@@ -200,7 +337,15 @@ export default function CreditLog() {
           <h1 className="text-2xl font-bold text-gray-900">Credit Log</h1>
           <p className="text-sm text-gray-500 mt-0.5">Track and collect outstanding customer credit</p>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePrint}
+            disabled={credits.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            <Printer className="w-4 h-4" />
+            Print
+          </button>
           <Button
             variant="outline"
             onClick={() => setReportModalOpen(true)}
@@ -250,7 +395,7 @@ export default function CreditLog() {
         >
           <option value="">All Customers</option>
           {(customersWithCredit || []).map(c => (
-            <option key={c.id} value={c.id}>{c.name} ({formatCurrency(c.credit_balance)})</option>
+            <option key={c.id} value={c.id}>{c.name} ({formatCurrency(custBalanceMap[String(c.id)] ?? c.credit_balance)})</option>
           ))}
         </select>
         <select

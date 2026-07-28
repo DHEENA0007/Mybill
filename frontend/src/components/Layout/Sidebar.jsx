@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, FileText, RotateCcw,
   CreditCard, BarChart2, Shield, Users, ChevronLeft, ChevronRight,
   Tag, Truck, LogOut, Boxes, Layout, CalendarDays, ArrowLeftRight,
-  Building2, FolderTree
+  Building2, FolderTree, Banknote
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import usePermission from '../../hooks/usePermission';
@@ -65,6 +65,8 @@ const navGroups = [
       { to: '/reports/inventory', icon: BarChart2, label: 'Inventory', perm: ['reports.inventory'] },
       { to: '/reports/financial', icon: BarChart2, label: 'Financial', perm: ['reports.financial'] },
       { to: '/reports/calendar', icon: CalendarDays, label: 'Calendar', perm: ['reports.sales', 'reports.financial'] },
+      { to: '/reports/customers', icon: Users, label: 'Customer Report', perm: ['reports.sales'] },
+      { to: '/reports/daily-credit', icon: Banknote, label: 'Daily Credit Collection', perm: ['reports.financial', 'financial.view_payments'] },
     ],
   },
   {
