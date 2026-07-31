@@ -156,6 +156,29 @@ class PaymentViewSet(TenantViewSet):
 
                     ref_id = f'CR-{credit_log.id}'
                 else:
+                    # Distribute payment across outstanding credit logs (oldest first)
+                    outstanding_logs = CreditLog.objects.filter(
+                        customer=customer,
+                        remaining_balance__gt=0
+                    ).exclude(
+                        invoice__status='cancelled'
+                    ).order_by('created_at')
+
+                    remaining_amount = amount
+                    for log in outstanding_logs:
+                        if remaining_amount <= 0:
+                            break
+                        apply = min(remaining_amount, log.remaining_balance)
+                        log.paid_amount += apply
+                        log.remaining_balance = max(log.credit_amount - log.paid_amount, Decimal('0'))
+                        log.save()
+
+                        if log.invoice:
+                            log.invoice.paid_amount += apply
+                            log.invoice.update_balance()
+
+                        remaining_amount -= apply
+
                     ref_id = f'CUST-{customer.id}'
 
                 customer.credit_balance = max(customer.credit_balance - amount, Decimal('0'))

@@ -114,6 +114,9 @@ export default function Payments() {
       qc.invalidateQueries(['customers-with-credit']);
       qc.invalidateQueries(['customer-credits']);
       qc.invalidateQueries(['credit-logs']);
+      qc.invalidateQueries(['invoices']);
+      qc.invalidateQueries(['cust-report-invoices']);
+      qc.invalidateQueries(['cust-report-credits']);
       setCreditFormOpen(false);
       setFormOpen(false); // Also close generic modal if open
       setCreditForm({ customer_id: '', credit_log_id: '', amount: '', payment_method: 'cash', notes: '' });
